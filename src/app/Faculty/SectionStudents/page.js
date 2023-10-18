@@ -1,0 +1,18 @@
+"use client";
+import Aside_Faculty from "@/Components/Default fix/Aside_Faculty";
+import StudentsList from "@/Components/Faculty/StudentsList";
+import { useState } from "react";
+
+function SectionStudents(){
+    const [clicked, setClicked] = useState(false);
+    return(
+        <>
+        <div className="d-flex">
+            <Aside_Faculty clicked={clicked} setClicked={setClicked}/>
+            <StudentsList setClicked={setClicked} clicked={clicked}/>
+        </div>
+            
+        </>
+    )
+};
+export default SectionStudents;

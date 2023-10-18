@@ -1,0 +1,58 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+body{
+  background-color: whitesmoke;
+  color: rgb(19, 19, 19);
+}
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none;
+}
+::-webkit-scrollbar{
+  height: 1px;
+  width: 1px;
+  background: black;
+}
+::-webkit-scrollbar-thumb{
+  background-color: red;
+}
+
+.custom-aside-admin1{
+  left: -250px;
+}
+.custom-aside-admin2{
+  left: 0px;
+  z-index: 5;
+  width: 250px;
+}
+.custom-table-h{
+  max-height: 60vh;
+}
+.custom-h{
+  height: 100vh;
+}
+.custom-eye{
+  right: 63px;
+  bottom: 0;
+}
+@media screen and (max-width:575px) {
+  .custom-h{
+    height: 140vh;
+  }
+  .custom-eye{
+    right:35px;
+  }
+}
+@media screen and (max-height:655px) {
+  .custom-h{
+    height:140vh ;
+  }
+}
