@@ -1,6 +1,6 @@
 "use client";
-import Aside_Faculty from "@/Components/Default fix/Aside_Faculty";
-import Preset from "@/Components/Faculty/PresetListofTest";
+import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
+import Preset from "@/_Components/Faculty/PresetListofTest";
 import { useState } from "react";
 function PresetPage() {
   const [clicked, setClicked] = useState(false);

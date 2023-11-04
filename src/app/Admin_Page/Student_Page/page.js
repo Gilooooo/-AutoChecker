@@ -1,12 +1,15 @@
-import Admin_Student from "@/Components/Admin Page/Admin_Student";
-import AdminAside from "@/Components/Default fix/Admin_aside";
+"use client"
+import Admin_Student from "@/_Components/Admin Page/Admin_Student";
+import AdminAside from "@/_Components/Default fix/Admin_aside";
+import { useState } from "react";
 
 function Student_Page(){
+    const [clicked, setClicked] = useState(false);
     return(
         <>
             <div className="d-flex">
-                <AdminAside/>
-                <Admin_Student/>
+                <AdminAside clicked={clicked} setClicked={setClicked}/>
+                <Admin_Student clicked={clicked} setClicked={setClicked}/>
             </div>
         </>
     )

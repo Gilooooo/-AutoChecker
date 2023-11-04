@@ -1,6 +1,6 @@
-import Footer from "@/Components/Default fix/Footer";
-import Header from "@/Components/Default fix/Header";
-import ForgetPassword from "@/Components/Forget Password/ForgetPassword";
+import Footer from "@/_Components/Default fix/Footer";
+import Header from "@/_Components/Default fix/Header";
+import ForgetPassword from "@/_Components/Forget Password/ForgetPassword";
 
 function ForgetPasswordPage(){
     return(

@@ -1,6 +1,6 @@
 "use client";
-import Aside_Faculty from "@/Components/Default fix/Aside_Faculty";
-import StudentsList from "@/Components/Faculty/StudentsList";
+import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
+import StudentsList from "@/_Components/Faculty/StudentsList";
 import { useState } from "react";
 
 function SectionStudents(){
@@ -11,7 +11,6 @@ function SectionStudents(){
             <Aside_Faculty clicked={clicked} setClicked={setClicked}/>
             <StudentsList setClicked={setClicked} clicked={clicked}/>
         </div>
-            
         </>
     )
 };

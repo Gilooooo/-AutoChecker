@@ -1,6 +1,6 @@
-import Footer from "@/Components/Default fix/Footer";
-import Header from "@/Components/Default fix/Header";
-import Login from "@/Components/Login/Login";
+import Footer from "@/_Components/Default fix/Footer";
+import Header from "@/_Components/Default fix/Header";
+import Login from "@/_Components/Login/Login";
 
 function LoginPage() {
   return (

@@ -1,6 +1,6 @@
-import Footer from "@/Components/Default fix/Footer";
-import Header from "@/Components/Default fix/Header";
-import MatchCode from "@/Components/Forget Password/MatchCode";
+import Footer from "@/_Components/Default fix/Footer";
+import Header from "@/_Components/Default fix/Header";
+import MatchCode from "@/_Components/Forget Password/MatchCode";
 
 function MatchCodePage(){
     return(

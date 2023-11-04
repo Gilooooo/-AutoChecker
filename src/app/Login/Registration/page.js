@@ -1,9 +1,9 @@
 "use client";
-import Footer from "@/Components/Default fix/Footer";
-import Header from "@/Components/Default fix/Header";
-import FacultyRegistration from "@/Components/Register/FacultyRegistration";
-import OptionPosition from "@/Components/Register/OptionPosition";
-import StudentRegistration from "@/Components/Register/StudentRegistration";
+import Footer from "@/_Components/Default fix/Footer";
+import Header from "@/_Components/Default fix/Header";
+import FacultyRegistration from "@/_Components/Register/FacultyRegistration";
+import OptionPosition from "@/_Components/Register/OptionPosition";
+import StudentRegistration from "@/_Components/Register/StudentRegistration";
 import { useState } from "react";
 function RegisterPage() {
   const [position, setPosition] = useState("");

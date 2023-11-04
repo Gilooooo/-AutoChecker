@@ -1,6 +1,6 @@
-import Footer from "@/Components/Default fix/Footer";
-import Header from "@/Components/Default fix/Header";
-import AdminLogin from "@/Components/Login/AdminLogin";
+import Footer from "@/_Components/Default fix/Footer";
+import Header from "@/_Components/Default fix/Header";
+import AdminLogin from "@/_Components/Login/AdminLogin";
 
 function Admin_Page() {
   return (

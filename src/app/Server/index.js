@@ -31,7 +31,44 @@ app.use(passport.session());
 require("./passportConfig")(passport);
 
 //START FUNCTIONS
-
+const checkExist = async (uidStudent, Uid_Professor, Uid_Section) => {
+  try {
+    const query =
+      "SELECT COUNT(*) as count from enrolled_sections WHERE Student_Uid = ? AND Professor_Uid = ? AND Section_Uid = ?";
+    const [count] = await connection.query(query, [
+      uidStudent,
+      Uid_Professor,
+      Uid_Section,
+    ]);
+    if (count[0].count === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+};
+const getInfoProf = async (UidProf) => {
+  try {
+    const query =
+    "SELECT SUBJECTDEPT, SURNAME, FIRSTNAME, MIDDLENAME, TUPCID FROM faculty_accounts WHERE uid = ?";
+  const [row] = await connection.query(query, [UidProf]);
+  return row;
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+}
+const getInfo = async (Student_Uid) => {
+  try {
+    const query =
+      "SELECT TUPCID, SURNAME, FIRSTNAME, MIDDLENAME FROM student_accounts WHERE uid = ?";
+    const [row] = await connection.query(query, [Student_Uid]);
+    return row;
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+};
 const sendCode = async (GSFEACC, code) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -51,15 +88,35 @@ const sendCode = async (GSFEACC, code) => {
   try {
     await transporter.sendMail(mailOptions);
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 };
 
+const Reportproblem = async (GSFEACC, MESSAGE) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "eos2022to2023@gmail.com",
+      pass: "ujfshqykrtepqlau",
+    },
+  });
+  const mailOptions = {
+    from: "eos2022to2023@gmail.com",
+    to: "eosteam22@gmail.com",
+    subject: "Web application problem",
+    text: `Report from user ${GSFEACC} \r\nMessage: ${MESSAGE}`,
+  };
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+};
 // Checking if the account is exist for student and faculty
 const checkAccount = async (TUPCID) => {
   try {
-    const checkquery = `SELECT TUPCID from student_accounts WHERE TUPCID = ?`;
-    const checkquery2 = `SELECT TUPCID from faculty_accounts WHERE TUPCID = ?`;
+    const checkquery = "SELECT TUPCID from student_accounts WHERE TUPCID = ?";
+    const checkquery2 = "SELECT TUPCID from faculty_accounts WHERE TUPCID = ?";
     const [accounts] = await connection.query(checkquery, [TUPCID]);
     const [accounts2] = await connection.query(checkquery2, [TUPCID]);
     return accounts.length || accounts2.length > 0;
@@ -104,10 +161,11 @@ const accountType = async (TUPCID) => {
       return null;
     }
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 };
 //END FUNCTIONS
+
 app.post("/StudentRegister", async (req, res) => {
   const {
     TUPCID,
@@ -242,17 +300,17 @@ app.post("/Login", async (req, res) => {
 app.post("/AdminLogin", async (req, res) => {
   const { Account_Number, Password } = req.body;
   try {
-    const query = "SELECT * FROM admin_account WHERE Account_Number = ?"
-    const [row]  = await connection.query(query, [Account_Number])
+    const query = "SELECT Uid_Account, Password FROM admin_account WHERE Account_Number = ?";
+    const [row] = await connection.query(query, [Account_Number]);
     const hash = await bcryptjs.compare(Password, row[0].Password);
-    if(hash){
-      const {Username} = row[0]
-      return res.status(200).send({Username})
-    }else{
-      return res.status(204).send({message:"Wrong Password"})
+    if (hash) {
+      const { Uid_Account } = row[0];
+      return res.status(200).send({ Uid_Account });
+    } else {
+      return res.status(204).send({ message: "Wrong Password" });
     }
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 //Forgetpassword
@@ -272,7 +330,6 @@ app.post("/ForgetPassword", async (req, res) => {
       .status(200)
       .send({ message: "Successfully send to your GSFE ACCOUNT!" });
   } catch (err) {
-    console.error(err);
     return res
       .status(409)
       .send({ message: "There is a problem try again later" });
@@ -295,7 +352,7 @@ app.post("/MatchCode", async (req, res) => {
       return res.status(409).send({ message: "Wrong Code" });
     }
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 //UpdatePassword
@@ -309,57 +366,136 @@ app.put("/UpdatePassword", async (req, res) => {
     await connection.query(query, [hashedPassword, TUPCID]);
     return res.status(200).send({ message: "Done" });
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
+
 //Aside
 //Faculty
-app.get("/FacultyAside", async(req, res) => {
-  const {UidProf} = req.query;
+app.get("/FacultyAside", async (req, res) => {
+  const { UidProf } = req.query;
   try {
-    const query = "SELECT * FROM faculty_accounts WHERE uid = ?"
+    const query = "SELECT * FROM faculty_accounts WHERE uid = ?";
     const [row] = await connection.query(query, [UidProf]);
-    return res.status(200).json(row)
+    return res.status(200).json(row);
   } catch (err) {
-    throw err
+    return res.status(500).send({ message: "Internal server error" });
   }
-})
+});
 //Student
-app.get("/StudentAside", async(req, res) => {
-  const {TUPCID} = req.query;
+app.get("/StudentAside", async (req, res) => {
+  const { TUPCID } = req.query;
   try {
     const query = "SELECT * FROM student_accounts WHERE uid = ?";
     const [row] = await connection.query(query, [TUPCID]);
     return res.status(200).json(row);
-  } catch (err) {
-    
-  }
-})
+  } catch (err) {}
+});
 
 //Student_Admin
-app.get("/Admin_Students", async(req, res) => {
-  try{
+app.get("/Admin_Students", async (req, res) => {
+  try {
     const query = "SELECT * FROM student_accounts";
     const [row] = await connection.query(query);
     return res.status(200).json(row);
-  }catch(err){
-    throw err
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
   }
-})
+});
 //Faculty
-app.get("/Admin_Faculty", async(req, res) => {
-  try{
+app.get("/Admin_Faculty", async (req, res) => {
+  try {
     const query = "SELECT * FROM faculty_accounts";
     const [row] = await connection.query(query);
     return res.status(200).json(row);
-  }catch(err){
-    throw err
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+app.get("/Admin_FacultyTestList", async(req, res) => {
+  try {
+    const query = "SELECT Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Uid_Test FROM faculty_testlist";
+    const [row] = await connection.query(query);
+    return res.status(200).json(row);
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
   }
 })
 
 //Admin
-app.get("/AdminAside")
+app.get("/AdminAside", async(req, res) => {
+  const {Uid_Account} = req.query; 
+  try {
+    const query = "SELECT Account_Number, Username FROM admin_account WHERE Uid_Account = ?";
+    const [row] = await connection.query(query, [Uid_Account]);
+    return res.status(200).json(row);
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+})
 
+//ReportProblem
+//Faculty
+app.get("/FacultyReportProblem", async (req, res) => {
+  const { UidProf } = req.query;
+  try {
+    const query = "SELECT GSFEACC FROM faculty_accounts WHERE uid = ?";
+    const [row] = await connection.query(query, [UidProf]);
+    return res.status(200).send(row[0]);
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+//Student
+app.get("/StudentReportProblem", async (req, res) => {
+  const { TUPCID } = req.query;
+  try {
+    const query = "SELECT GSFEACC FROM student_accounts WHERE uid = ?";
+    const [row] = await connection.query(query, [TUPCID]);
+    return res.status(200).send(row);
+  } catch (err) {
+    throw err;
+  }
+});
+
+app.post("/ReportProblem", (req, res) => {
+  const { GSFEACC, MESSAGE } = req.body;
+  try {
+    Reportproblem(GSFEACC, MESSAGE);
+    return res.status(200).send({ message: "DONE" });
+  } catch (err) {
+    throw err;
+  }
+});
+//Admin
+
+//Settings
+//Faculty
+app.get("/FacultySettings", async (req, res) => {
+  const { UidProf } = req.query;
+
+  try {
+    const query = "SELECT * FROM faculty_accounts WHERE uid = ?";
+    const [row] = await connection.query(query, [UidProf]);
+
+    return res.status(200).json(row);
+  } catch (err) {
+    throw err;
+  }
+});
+
+app.get("/StudentSettings", async (req, res) => {
+  const { Tupcid } = req.query;
+  try {
+    const query = "SELECT * FROM student_accounts WHERE uid = ?";
+    const [row] = await connection.query(query, [Tupcid]);
+    return res.status(200).json(row);
+  } catch (err) {
+    throw err;
+  }
+});
 
 // FacultyTestList
 app.get("/TestListSectionName", async (req, res) => {
@@ -370,17 +506,23 @@ app.get("/TestListSectionName", async (req, res) => {
     const [section_names] = await connection.query(query, [UidProf]);
     return res.status(200).json(section_names);
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 app.post("/TestList", async (req, res) => {
   const { TestName, Subject, UidTest, UidProf, SectionName } = req.body;
   try {
+    const infos = await getInfoProf(UidProf);
     const query1 =
-      "INSERT INTO faculty_testlist (TestName, Subject, Section_Name, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, NOW())";
+      "INSERT INTO faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Uid_Test, Uid_Professor, date_created) values (?, ? ,? ,?, ?, ?, ?, ?, ?, ?, NOW())";
     const query2 =
-      "INSERT INTO preset_faculty_testlist (TestName, Subject, Section_Name, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, NOW())";
+      "INSERT INTO preset_faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     await connection.query(query1, [
+      infos[0].FIRSTNAME,
+      infos[0].MIDDLENAME,
+      infos[0].SURNAME,
+      infos[0].SUBJECTDEPT,
+      infos[0].TUPCID,
       TestName,
       Subject,
       SectionName,
@@ -388,6 +530,11 @@ app.post("/TestList", async (req, res) => {
       UidProf,
     ]);
     await connection.query(query2, [
+      infos[0].FIRSTNAME,
+      infos[0].MIDDLENAME,
+      infos[0].SURNAME,
+      infos[0].SUBJECTDEPT,
+      infos[0].TUPCID,
       TestName,
       Subject,
       SectionName,
@@ -396,7 +543,7 @@ app.post("/TestList", async (req, res) => {
     ]);
     return res.status(200).send({ message: "done" });
   } catch (err) {
-    throw err;
+    throw err
   }
 });
 
@@ -407,7 +554,7 @@ app.get("/TestList", async (req, res) => {
     const [row] = await connection.query(query, [UidProf]);
     return res.status(200).json(row);
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 
@@ -418,7 +565,7 @@ app.delete("/TestList", async (req, res) => {
     await connection.query(query, [UidTest]);
     return res.status(200).send({ message: "Done" });
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 
@@ -431,7 +578,7 @@ app.get("/Preset", async (req, res) => {
     const [row] = await connection.query(query, [UidProf]);
     return res.status(200).json(row);
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 
@@ -453,7 +600,7 @@ app.put("/Faculty_sections", async (req, res) => {
     ]);
     return res.status(200).send({ message: "done" });
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 
@@ -464,79 +611,80 @@ app.get("/Faculty_sections", async (req, res) => {
     const [sections] = await connection.query(query, [UidProf]);
     return res.status(200).json(sections);
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 
-//Student
-app.get("/CheckingTestList", async (req, res) => {
-  const { Subject, Section_Name } = req.query;
+app.get("/Faculty_StudentList", async (req, res) => {
+  const { Uid_Section, Section } = req.query;
   try {
-    const query =
-      "SELECT TestName, Uid_Test FROM faculty_testlist WHERE Section_Name = ? AND Subject = ?";
-    const [row] = await connection.query(query, [Section_Name, Subject]);
-    if (row) {
-      return res.status(200).json(row);
-    } else {
-      return res.status(204).send({ message: "Empty yet" });
-    }
+    const query = "SELECT * FROM enrolled_sections WHERE Section_Uid = ? AND Section_Name = ? ";
+    const [row] = await connection.query(query, [Uid_Section, Section]);
+    return res.status(200).send(row);
+  } catch (err) {
+    return res.status(500).send({ message: "Internal Server error" });
+  }
+});
+
+app.delete("/Faculty_Students", async (req, res) => {
+  const { Uid_Section, Section, Professor_Uid } = req.query;
+  const { selected } = req.body;
+  try {
+    const selectedStudents = selected.map(() => "?").join(",");
+    const query = `DELETE FROM enrolled_sections WHERE Student_TUPCID IN (${selectedStudents}) AND Professor_Uid = ? AND Section_Uid = ? AND Section_Name = ?`;
+    await connection.query(query,[...selected, Professor_Uid, Uid_Section, Section])
+    return res.status(200).send({ message: "Mission accomplished" });
   } catch (err) {
     throw err;
   }
 });
+//Student
 app.get("/StudentTestList", async (req, res) => {
-  const { uid } = req.query;
+  const { uidsection } = req.query;
   try {
-    const query =
-      "SELECT COUNT(*) as row FROM faculty_sections WHERE Uid_Section = ?";
-    const [rows] = await connection.query(query, [uid]);
-    const { row } = rows[0];
-    if (row === 1) {
-      const query = "SELECT * FROM faculty_sections WHERE Uid_Section = ?";
-      const [row] = await connection.query(query, [uid]);
+    const query = "SELECT * FROM faculty_sections WHERE Uid_Section = ?";
+    const [row] = await connection.query(query, [uidsection]);
+    if (row.length > 0) {
       return res.status(200).json(row);
     } else {
-      return res.status(409).send({ message: "Code not found" });
+      return res
+        .status(204)
+        .send({ message: "Wrong UID or no section with that UID" });
     }
   } catch (err) {
-    throw err;
+    return res.status(500).send({ message: "Internal server error" });
   }
 });
 
 app.put("/StudentTestList", async (req, res) => {
-  const { Section_Name, Subject, Uid_Professor, Uid_Section } = req.body[0];
-  const { TestName, UidTest, StudentUid } = req.query;
-  console.log(TestName);
+  const { uidStudent } = req.query;
+  const { Uid_Professor, Uid_Section, Section_Name } = req.body;
   try {
-    const query =
-      "INSERT INTO student_list_test (TestName, Uid_Test, Uid_Student, Enrolled_Subject, Enrolled_Uid_Section, Enrolled_Section_Name, Test_Status, Score, Uid_Professor, date_enrolled) values (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
-    await connection.query(query, [
-      TestName,
-      UidTest,
-      StudentUid,
-      Subject,
-      Uid_Section,
-      Section_Name,
-      "",
-      "",
-      Uid_Professor,
-    ]);
-    return res.status(200).send({ message: "done" });
+    const StudentName = await getInfo(uidStudent);
+    const checking = await checkExist(uidStudent, Uid_Professor, Uid_Section);
+    if (checking) {
+      const query =
+        "INSERT INTO enrolled_sections (Student_TUPCID, Student_FirstName,  Student_MiddleName, Student_LastName, Student_Uid, Professor_Uid, Section_Uid, Section_Name, date_added) values (?, ?, ?, ?, ?, ? ,? ,?, NOW())";
+      const { FIRSTNAME, MIDDLENAME, SURNAME, TUPCID } = StudentName[0];
+      await connection.query(query, [
+        TUPCID,
+        FIRSTNAME, 
+        MIDDLENAME, 
+        SURNAME,
+        uidStudent,
+        Uid_Professor,
+        Uid_Section,
+        Section_Name,
+      ]);
+      return res.status(200).send({ message: "Inserted" });
+    } else {
+      return res.status(409).send({ message: "Already enrolled" });
+    }
   } catch (err) {
-    throw err;
+    throw err
   }
 });
 
-app.get("/FetchingStudentTest", async (req, res) => {
-  const { StudentUid } = req.query;
-  try {
-    const query = "SELECT * FROM student_list_test WHERE Uid_Student = ?";
-    const [row] = await connection.query(query, [StudentUid]);
-    return res.status(200).json(row);
-  } catch (err) {
-    throw err;
-  }
-});
 // Start the server
 app.listen(3001, () => {
   console.log("Server is running on port 3001");

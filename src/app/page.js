@@ -1,19 +1,27 @@
-import Footer from "@/Components/Default fix/Footer";
-import Header from "@/Components/Default fix/Header";
-import Link from "next/link";
+"use client"
+import FooterLanding from "@/_Components/Default fix/FooterLanding";
+import HeaderLanding from "@/_Components/Default fix/HeaderLanding";
+import About from "@/_Components/LandingPage/About";
+import Contact from "@/_Components/LandingPage/Contact";
+import Hero from "@/_Components/LandingPage/Hero";
+import Manual from "@/_Components/LandingPage/Manual";
 
 export default function Home() {
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   return (
-    <main className="d-flex justify-content-center align-items-center vh-100">
-      <Header />
-      <div className="row text-center">
-        <Link href="/Login">LOGIN</Link>
-        <Link href="/Login/Registration">Register</Link>
-        <Link href="/Login/Password/ForgetPassword">Password</Link>
-        <Link href="/Admin_Page">Admin LOGIN</Link>
-        <Link href="/Faculty">Faculty</Link>
-      </div>
-      <Footer />
+    <main className="d-flex flex-column justify-content-center align-items-center ">
+      <HeaderLanding />
+      <Hero/>
+      <About/>
+      <Manual/>
+      <Contact scrollToTop={scrollToTop}/>
+      <FooterLanding />
     </main>
   );
 }

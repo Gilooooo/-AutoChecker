@@ -1,13 +1,15 @@
-import Admin_Faculty from "@/Components/Admin Page/Admin_Faculty";
-import AdminAside from "@/Components/Default fix/Admin_aside";
+"use client"
+import Admin_Faculty from "@/_Components/Admin Page/Admin_Faculty";
+import AdminAside from "@/_Components/Default fix/Admin_aside";
+import { useState } from "react";
 
 function Faculty_Page() {
+  const [clicked, setClicked] = useState(false);
   return (
     <>
       <div className="d-flex">
-        <AdminAside />
-
-        <Admin_Faculty />
+        <AdminAside clicked={clicked} setClicked={setClicked}/>
+        <Admin_Faculty clicked={clicked} setClicked={setClicked}/>
       </div>
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
-import Aside_Faculty from "@/Components/Default fix/Aside_Faculty";
-import ListOfTest from "@/Components/Faculty/ListofTest";
+import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
+import ListOfTest from "@/_Components/Faculty/ListofTest";
 import { useState } from "react";
 
 function ListOfTestPage() {
