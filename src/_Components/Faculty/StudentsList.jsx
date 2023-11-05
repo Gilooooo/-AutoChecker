@@ -12,6 +12,7 @@ function StudentsList({ clicked, setClicked }) {
   const params = useSearchParams();
   const Uid_Section = params.get("Uid_Section");
   const Section = params.get("Section");
+  const [warning, setWarning] = useState(false)
 
   const firstName = () => {
     const sortedList = [...students].sort((a, b) =>
@@ -52,20 +53,18 @@ function StudentsList({ clicked, setClicked }) {
     }
   };
 
-
   useEffect(() => {
     const changings = setInterval(() => {
       setCopyClick(false);
     }, 2000);
-  
     return () => {
       clearInterval(changings);
     };
-  }, []);
+  }, [copyClick]);
 
   useEffect(() => {
     fetchStudents();
-  }, [TUPCID])
+  }, [TUPCID]);
 
   const handleclick = () => {
     setClicked(!clicked);
@@ -83,16 +82,19 @@ function StudentsList({ clicked, setClicked }) {
   };
 
   const handleRemove = async () => {
-    console.log("Selected Students:", selectedStudents);
     const data = {
       selected: selectedStudents,
     };
+    
     try {
       const response = await axios.delete(
         `http://localhost:3001/Faculty_Students?Uid_Section=${Uid_Section}&Professor_Uid=${TUPCID}&Section=${Section}`,
         { data }
       );
-      fetchStudents();
+      if(response.status == 200){
+        setWarning(!warning)
+        fetchStudents();
+      }
     } catch (err) {
       console.error(err);
     }
@@ -100,7 +102,7 @@ function StudentsList({ clicked, setClicked }) {
 
   const copy = (e) => {
     setCopyClick(!copyClick);
-    navigator.clipboard.writeText(e);;
+    navigator.clipboard.writeText(e);
   };
 
   const checkAll = () => {
@@ -120,10 +122,7 @@ function StudentsList({ clicked, setClicked }) {
             className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
             onClick={handleclick}
           ></i>
-          <Link
-            className="d-none d-sm-block"
-            href={{ pathname: "/Faculty/ListOfTest" }}
-          >
+          <Link className="d-none d-sm-block" href={{ pathname: "/Faculty" }}>
             <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
           </Link>
           <h2 className="m-0 w-100 text-sm-start text-center pe-3">
@@ -145,10 +144,21 @@ function StudentsList({ clicked, setClicked }) {
           <div className="d-flex flex-column align-self-end">
             <small className="text-end">Sort by:</small>
             <div className="d-md-flex d-none gap-md-2 gap-1 align-self-end">
-              <button className="btn btn-outline-dark btn-sm" onClick={firstName}>FIRSTNAME</button>
-              <button className="btn btn-outline-dark btn-sm" onClick={surName}>SURNAME</button>
-              <button className="btn btn-outline-dark btn-sm" onClick={AZName}>A-Z</button>
-              <button className="btn btn-outline-dark btn-sm" onClick={ZAName}>Z-A</button>
+              <button
+                className="btn btn-outline-dark btn-sm"
+                onClick={firstName}
+              >
+                FIRSTNAME
+              </button>
+              <button className="btn btn-outline-dark btn-sm" onClick={surName}>
+                SURNAME
+              </button>
+              <button className="btn btn-outline-dark btn-sm" onClick={AZName}>
+                A-Z
+              </button>
+              <button className="btn btn-outline-dark btn-sm" onClick={ZAName}>
+                Z-A
+              </button>
             </div>
             <div
               className={
@@ -159,7 +169,7 @@ function StudentsList({ clicked, setClicked }) {
             >
               <button
                 className="btn btn-outline-dark btn-sm"
-                onClick={handleRemove}
+                onClick={() => setWarning(!warning)}
               >
                 REMOVE
               </button>
@@ -196,6 +206,43 @@ function StudentsList({ clicked, setClicked }) {
             </div>
           </div>
         ))}
+        {/* Modal */}
+        {warning && (
+          <div className="d-block modal bg-secondary" tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Warning</h5>
+                </div>
+                <div className="modal-body">
+                  <p className="text-center">
+                    It will lead you to the forget password and you need to
+                    re-login again, are you sure to do that?
+                  </p>
+                </div>
+                <div className="modal-footer align-self-center">
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    data-bs-dismiss="modal"
+                    onClick={() => setWarning(!warning)}
+                  >
+                    Cancel
+                  </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      data-bs-dismiss="modal"
+                      onClick={handleRemove}
+                    >
+                      Ok
+                    </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* end modal */}
       </section>
     </main>
   );

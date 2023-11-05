@@ -2,8 +2,9 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 
-function Admin_Student({clicked, setClicked}) {
+function Admin_Student({ clicked, setClicked }) {
   const [student, setStudent] = useState([]);
+  const [searchValue, setSearchValue] = useState("");
 
   const fetchStudent = async () => {
     try {
@@ -26,6 +27,9 @@ function Admin_Student({clicked, setClicked}) {
   const handleclick = () => {
     setClicked(!clicked);
   };
+  const newStudentList = student.filter((lists) =>
+    lists.FIRSTNAME.toLowerCase().includes(searchValue.toLowerCase())
+  );
   return (
     <main className="w-100 p-0 vh-100 align-items-start">
       <section className="contatiner col-12 pe-2 text-sm-start text-center d-flex flex-column align-items-center justify-content-center">
@@ -41,18 +45,16 @@ function Admin_Student({clicked, setClicked}) {
           </h2>
         </div>
         <div className="d-flex gap-2 justify-content-end align-items-center px-sm-5 px-xl-2 px-2 w-100 mt-2">
-              <div className="d-flex">
-                <input
-                  type="text"
-                  placeholder="FirstName Search"
-                  className="px-3 py-1 rounded border border-dark"
-                />
-                <button className="btn btn-dark">
-                  <i className="bi bi-search"></i>
-                </button>
-                <button className="btn btn-dark">AUDIT LOG</button>
-              </div>
-            </div>
+          <div className="d-flex">
+            <input
+              type="text"
+              placeholder="FirstName Search"
+              className="px-3 py-1 rounded border border-dark"
+              onChange={(e) => setSearchValue(e.target.value)}
+            />
+            <button className="btn btn-dark">AUDIT LOG</button>
+          </div>
+        </div>
         <section className="container-fluid col-12">
           <div className="row p-0 pt-2">
             <div className="col-12 rounded pe-1 table-responsive">
@@ -68,7 +70,7 @@ function Admin_Student({clicked, setClicked}) {
                   </tr>
                 </thead>
                 <tbody>
-                  {student.map((students, index) => (
+                  {newStudentList.map((students, index) => (
                     <tr key={index}>
                       <td scope="col">{students.TUPCID}</td>
                       <td scope="col">{students.FIRSTNAME}</td>

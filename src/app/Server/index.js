@@ -471,31 +471,8 @@ app.post("/ReportProblem", (req, res) => {
 });
 //Admin
 
-//Settings
-//Faculty
-app.get("/FacultySettings", async (req, res) => {
-  const { UidProf } = req.query;
 
-  try {
-    const query = "SELECT * FROM faculty_accounts WHERE uid = ?";
-    const [row] = await connection.query(query, [UidProf]);
 
-    return res.status(200).json(row);
-  } catch (err) {
-    throw err;
-  }
-});
-
-app.get("/StudentSettings", async (req, res) => {
-  const { Tupcid } = req.query;
-  try {
-    const query = "SELECT * FROM student_accounts WHERE uid = ?";
-    const [row] = await connection.query(query, [Tupcid]);
-    return res.status(200).json(row);
-  } catch (err) {
-    throw err;
-  }
-});
 
 // FacultyTestList
 app.get("/TestListSectionName", async (req, res) => {
@@ -658,13 +635,13 @@ app.get("/StudentTestList", async (req, res) => {
 
 app.put("/StudentTestList", async (req, res) => {
   const { uidStudent } = req.query;
-  const { Uid_Professor, Uid_Section, Section_Name } = req.body;
+  const { Uid_Professor, Uid_Section, Section_Name, Subject } = req.body;
   try {
     const StudentName = await getInfo(uidStudent);
     const checking = await checkExist(uidStudent, Uid_Professor, Uid_Section);
     if (checking) {
       const query =
-        "INSERT INTO enrolled_sections (Student_TUPCID, Student_FirstName,  Student_MiddleName, Student_LastName, Student_Uid, Professor_Uid, Section_Uid, Section_Name, date_added) values (?, ?, ?, ?, ?, ? ,? ,?, NOW())";
+        "INSERT INTO enrolled_sections (Student_TUPCID, Student_FirstName,  Student_MiddleName, Student_LastName, Student_Uid, Professor_Uid, Section_Uid, Section_Name, Section_Subject, date_added) values (?, ?, ?, ?, ?, ?, ? ,? ,?, NOW())";
       const { FIRSTNAME, MIDDLENAME, SURNAME, TUPCID } = StudentName[0];
       await connection.query(query, [
         TUPCID,
@@ -675,6 +652,7 @@ app.put("/StudentTestList", async (req, res) => {
         Uid_Professor,
         Uid_Section,
         Section_Name,
+        Subject
       ]);
       return res.status(200).send({ message: "Inserted" });
     } else {
@@ -682,6 +660,136 @@ app.put("/StudentTestList", async (req, res) => {
     }
   } catch (err) {
     throw err
+  }
+});
+
+app.get("/StudentSectionList", async(req, res) => {
+  const {uidStudent} = req.query;
+  try { 
+    const query = "SELECT * FROM enrolled_sections WHERE Student_Uid = ?";
+    const [row] = await connection.query(query, [uidStudent]);
+    return res.status(200).send(row);
+  } catch (err) {
+    return res.status(500).send({ message: "Problem at the server" });
+  }
+} )
+
+//Settings
+//DEMO
+app.get("/facultyinfos/:TUPCID", async (req, res) => {
+  const { TUPCID } = req.params;
+  try {
+    const query = "SELECT * from faculty_accounts WHERE uid = ?";
+    const [getall] = await connection.query(query, [TUPCID]);
+    if (getall.length > 0) {
+      const { TUPCID ,FIRSTNAME, SURNAME, MIDDLENAME, SUBJECTDEPT, GSFEACC, PASSWORD } =
+        getall[0];
+      return res
+        .status(202)
+        .send({
+          Tupcid: TUPCID,
+          FIRSTNAME,
+          SURNAME,
+          MIDDLENAME,
+          SUBJECTDEPT,
+          GSFEACC,
+          PASSWORD,
+        });
+    } else {
+      return res.status(404).send({ message: "Person not found" });
+    }
+  } catch (error) {
+    return res.status(500).send({ message: "Failed to fetch TUPCID" });
+  }
+});
+
+app.put("/updatefacultyinfos/:TUPCID", async (req, res) => {
+  const { TUPCID } = req.params;
+  const updatedData = req.body;
+  try {
+    const datas = Object.keys(updatedData)
+      .map((key) => `${key} = ?`)
+      .join(",");
+    const query = `UPDATE faculty_accounts SET ${datas} WHERE uid = ?`;
+    connection.query(
+      query,
+      [...Object.values(updatedData), TUPCID],
+      (err, result) => {
+        if (err) {
+          console.error("Error updating student data:", err);
+          return res.status(500).send({ message: "Database error" });
+        }
+        return res
+          .status(200)
+          .send({ message: "Student updated successfully" });
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+app.get("/studinfos/:TUPCID", async (req, res) => {
+  const { TUPCID } = req.params;
+  try {
+    const query = "SELECT * from student_accounts WHERE uid = ?";
+    const [getall] = await connection.query(query, [TUPCID]);
+    if (getall.length > 0) {
+      const {
+        TUPCID,
+        FIRSTNAME,
+        SURNAME,
+        MIDDLENAME,
+        COURSE,
+        SECTION,
+        YEAR,
+        STATUS,
+        GSFEACC,
+        PASSWORD,
+      } = getall[0];
+      return res
+        .status(202)
+        .send({
+          Tupcid:TUPCID,
+          FIRSTNAME,
+          SURNAME,
+          MIDDLENAME,
+          COURSE,
+          SECTION,
+          YEAR,
+          STATUS,
+          GSFEACC,
+          PASSWORD,
+        });
+    }
+  } catch (error) {
+    return res.status(500).send({ message: "Failed to fetch TUPCID" });
+  }
+});
+
+app.put("/updatestudentinfos/:TUPCID", async (req, res) => {
+  const { TUPCID } = req.params;
+  const updatedData = req.body;
+  try {
+    const datas = Object.keys(updatedData)
+      .map((key) => `${key} = ?`)
+      .join(",");
+    const query = `UPDATE student_accounts SET ${datas} WHERE uid = ?`;
+    connection.query(
+      query,
+      [...Object.values(updatedData), TUPCID],
+      (err, result) => {
+        if (err) {
+          console.error("Error updating student data:", err);
+          return res.status(500).send({ message: "Database error" });
+        }
+        return res
+          .status(200)
+          .send({ message: "Student updated successfully" });
+      }
+    );
+  } catch (error) {
+    console.log(error);
   }
 });
 

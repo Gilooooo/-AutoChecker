@@ -3,7 +3,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-function Sections({setClicked, clicked}) {
+function Sections({ setClicked, clicked }) {
   const { TUPCID } = useTUPCID();
   const [sectionList, setSectionList] = useState([]);
   const [copyClick, setCopyClick] = useState(false);
@@ -13,7 +13,6 @@ function Sections({setClicked, clicked}) {
   const [subject, setSubject] = useState("");
   const [uid, setUid] = useState("");
   const [message, setMessage] = useState("");
-  const [copymessage, setCopyMessage] = useState("");
 
   const add = async () => {
     const New = {
@@ -65,11 +64,25 @@ function Sections({setClicked, clicked}) {
     }
   };
 
-  const copy = (e) => {
-    setCopyClick(!copyClick);
-    navigator.clipboard.writeText(e);
-    setCopyMessage("Copy successfull");
+  const copy = (uid) => {
+    const updatedSections = sectionList.map((section) => {
+      if (section.Uid_Section === uid) {
+        section.copyClick = !section.copyClick;
+        navigator.clipboard.writeText(section.Uid_Section);
+      }
+      return section;
+    });
+    setSectionList(updatedSections);
   };
+
+  useEffect(() => {
+    const changings = setInterval(() => {
+      setCopyClick(false);
+    }, 2000);
+    return () => {
+      clearInterval(changings);
+    };
+  }, [copyClick]);
 
   useEffect(() => {
     const fetching = setInterval(() => {
@@ -97,7 +110,10 @@ function Sections({setClicked, clicked}) {
     <main className="w-100 min-vh-100 overflow-auto">
       <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-start p-2">
         <div className="d-flex gap-2 align-items-center mb-3 w-100">
-          <i className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded" onClick={handleclick}></i>
+          <i
+            className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
+            onClick={handleclick}
+          ></i>
           <h2 className="m-0 w-100 text-sm-start text-center pe-3">FACULTY</h2>
         </div>
         <div className="d-flex justify-content-between w-100 ">
@@ -267,11 +283,11 @@ function Sections({setClicked, clicked}) {
               </div>
               <div className="d-flex border border-dark rounded col-lg-2 col-md-3 col-sm-4 col-5 justify-content-between align-items-center">
                 <span className="px-3">{section.Uid_Section}</span>
-                {copyClick != "" ? (
-                  <small>{copymessage}</small>
+                {section.copyClick ? (
+                  <i className="bi bi-check px-2 border-start border-secondary"></i>
                 ) : (
                   <i
-                    className="bi bi-copy px-3 border-start border-secondary"
+                    className="bi bi-copy px-2 border-start border-secondary"
                     onClick={() => copy(section.Uid_Section)}
                   ></i>
                 )}

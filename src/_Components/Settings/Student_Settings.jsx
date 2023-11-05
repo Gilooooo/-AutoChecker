@@ -6,48 +6,109 @@ import { useState } from "react";
 
 function StudentSettings({ clicked, setClicked }) {
   const { TUPCID } = useTUPCID();
-  const [student, setStudents] = useState([]);
-  const [edit, setEdit] = useState(true);
+  const [Tupcid, setTupcid] = useState("");
   const [firstName, setFirstName] = useState("");
-  const [gsfe, setGsfe] = useState("");
-  const [middleName, setMiddleName] = useState("");
   const [surName, setSurName] = useState("");
+  const [MiddleName, setMiddleName] = useState("");
   const [course, setCourse] = useState("");
-  const [year, setYear] = useState("");
   const [section, setSection] = useState("");
+  const [year, setYear] = useState("");
   const [status, setStatus] = useState("");
-  const [pass, setPass] = useState("");
-  
-  const fetchInfo = async () => {
+  const [gsfeacc, setGsfeacc] = useState("");
+  const [initialStudentInfo, setInitialInfo] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [warning, setWarning] = useState(false);
+
+  useEffect(() => {
+    const fetchstudentdate = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:3001/studinfos/${TUPCID}`
+        );
+        const {
+          FIRSTNAME,
+          SURNAME,
+          MIDDLENAME,
+          COURSE,
+          SECTION,
+          YEAR,
+          STATUS,
+          GSFEACC,
+        } = response.data;
+
+        // Store initial faculty information
+        const initialStudentInfo = {
+          FIRSTNAME,
+          MIDDLENAME,
+          SURNAME,
+          COURSE,
+          SECTION,
+          YEAR,
+          STATUS,
+          GSFEACC,
+        };
+
+        // Set state with fetched data
+        setTupcid(response.data.Tupcid);
+        setFirstName(FIRSTNAME);
+        setMiddleName(MIDDLENAME);
+        setSurName(SURNAME);
+        setCourse(COURSE);
+        setSection(SECTION);
+        setYear(YEAR);
+        setStatus(STATUS);
+        setGsfeacc(GSFEACC);
+
+        setInitialInfo(initialStudentInfo);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchstudentdate();
+  }, [TUPCID]);
+
+  const handleSave = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:3001/StudentSettings?Tupcid=${TUPCID}`
-      );
-      setStudents(response.data);
-    } catch (err) {
-      console.error(err);
+      const updatedData = {
+        FIRSTNAME: firstName,
+        SURNAME: surName,
+        MIDDLENAME: MiddleName,
+        COURSE: course,
+        SECTION: section,
+        YEAR: year,
+        STATUS: status,
+        GSFEACC: gsfeacc,
+      };
+
+      await updateStudentDataOnServer(TUPCID, updatedData);
+      // Update initial faculty information
+      setInitialInfo(updatedData);
+      // Update shared state or context with the new information
+      updateStudentInfoContext(updatedData);
+      // Exit editing mode
+      setIsEditing(false);
+    } catch (error) {
+      console.log(error);
     }
   };
 
-  useEffect(() => {
-    const fetching = setInterval(() => {
-      if(!edit){
-        return;
-      }
-      fetchInfo();
-    }, 1000);
-    return () => {
-      clearInterval(fetching);
-    };
-  }, [TUPCID, edit]);
-
+  const updateStudentDataOnServer = async (TUPCID, updatedData) => {
+    try {
+      await axios.put(
+        `http://localhost:3001/updatestudentinfos/${TUPCID}`,
+        updatedData
+      );
+    } catch (error) {
+      console.error("Error updating student data:", error);
+    }
+  };
   const handleclick = () => {
     setClicked(!clicked);
   };
   return (
     <main className="w-100 min-vh-100">
-      <section className="container-fluid col-12 p-2 d-flex flex-column">
-        <div className="d-flex ">
+      <section className="container-fluid col-12 p-2 d-flex flex-column ">
+        <div className="d-flex align-items-center">
           <i
             className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
             onClick={handleclick}
@@ -55,51 +116,70 @@ function StudentSettings({ clicked, setClicked }) {
           <Link href={{ pathname: "/Student" }}>
             <i className="bi bi-arrow-left fs-3 custom-black-color d-sm-block d-none"></i>
           </Link>
-          <h2 className="m-0 w-100 text-sm-start text-center pe-3">SETTINGS</h2>
+          <h2 className="m-0 w-100 text-center text-sm-start pe-2">Settings</h2>
         </div>
-        <h3 className="text-center mt-4">UPDATE PERSONAL INFO</h3>
-        <form className="container border border-dark rounded d-flex flex-column col-xl-5 col-lg-6 col-md-8 align-items-center gap-1 py-3">
-          <span className="align-self-end" onClick={() => setEdit(!edit)}>
-            EDIT
+        <h3 className="text-center pt-3 m-0 ">UPDATE PERSONAL INFO</h3>
+        <div className="d-flex justify-content-center flex-column container col-md-9 col-xl-5 col-lg-7 rounded border border-dark py-2">
+          <span
+            className="text-end"
+            onClick={() => {
+              if (isEditing) {
+                setFirstName(initialStudentInfo.FIRSTNAME);
+                setMiddleName(initialStudentInfo.MIDDLENAME);
+                setSurName(initialStudentInfo.SURNAME);
+                setCourse(initialStudentInfo.COURSE);
+                setSection(initialStudentInfo.SECTION);
+                setYear(initialStudentInfo.YEAR);
+                setStatus(initialStudentInfo.STATUS);
+                setGsfeacc(initialStudentInfo.GSFEACC);
+              }
+              setIsEditing((prevEditing) => !prevEditing);
+            }}
+          >
+            {isEditing ? "Cancel" : "EDIT"}
           </span>
-          <div className="row col-12 justify-content-center align-items-center px-sm-4 px-2">
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">TUPC ID</label>
+          <form
+            onSubmit={handleSave}
+            className="row p-3 pt-0 col-11 text-sm-start text-center align-self-center"
+          >
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">TUPC ID</p>
               <input
-                value={student[0]?.TUPCID || ""}
                 type="text"
-                className="border border-dark form-control rounded "
+                value={Tupcid}
+                className="col-12 rounded py-1 px-3 border border-dark"
                 disabled
               />
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">GSFE ACCOUNT</label>
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">GSFE ACCOUNT</p>
               <input
-                value={student[0]?.GSFEACC || ""}
                 type="text"
-                className="border border-dark form-control rounded "
-                disabled={edit}
+                value={gsfeacc}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                disabled={!isEditing}
+                onChange={(e) => setGsfeacc(e.target.value)}
               />
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">FIRST NAME</label>
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">FIRST NAME</p>
               <input
-                value={student[0]?.FIRSTNAME || ""}
                 type="text"
-                className="border border-dark form-control rounded "
-                disabled={edit}
+                value={firstName}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                disabled={!isEditing}
+                onChange={(e) => setFirstName(e.target.value)}
               />
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">COURSE</label>
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">COURSE</p>
               <select
                 type="text"
-                className="border border-dark form-control rounded "
-                disabled={edit}
+                value={course}
+                onChange={(e) => setCourse(e.target.value)}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                disabled={!isEditing}
               >
-                <option value={student[0]?.COURSE || ""} hidden selected>
-                  {student[0]?.COURSE || ""}
-                </option>
                 <option value="BSCE">BSCE</option>
                 <option value="BSEE">BSEE</option>
                 <option value="BSME">BSME</option>
@@ -117,75 +197,126 @@ function StudentSettings({ clicked, setClicked }) {
                 <option value="BET PPT">BET PPT</option>
               </select>
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">MIDDLE NAME</label>
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">MIDDLE NAME</p>
               <input
-                value={student[0]?.MIDDLENAME || ""}
                 type="text"
-                className="border border-dark form-control rounded "
-                disabled={edit}
+                value={MiddleName}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                disabled={!isEditing}
+                onChange={(e) => setMiddleName(e.target.value)}
               />
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">YEAR</label>
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">YEAR</p>
               <select
-                className="border border-dark form-control rounded "
-                disabled={edit}
+                type="text"
+                value={year}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                onChange={(e) => setYear(e.target.value)}
+                disabled={!isEditing}
               >
-                <option value={student[0]?.YEAR || ""} selected hidden>
-                  {student[0]?.YEAR || ""}
-                </option>
-                <option value="1ST">1ST</option>
-                <option value="2ND">2ND</option>
-                <option value="3RD">3RD</option>
-                <option value="4TH">4TH</option>
+                <option value="1st">1st</option>
+                <option value="2nd">2nd</option>
+                <option value="3rd">3rd</option>
+                <option value="4th">4th</option>
               </select>
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">SURNAME</label>
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">SURNAME</p>
               <input
-                value={student[0]?.SURNAME || ""}
                 type="text"
-                className="border border-dark form-control rounded "
-                disabled={edit}
+                value={surName}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                disabled={!isEditing}
+                onChange={(e) => setSurName(e.target.value)}
               />
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">SECTION</label>
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">SECTION</p>
               <select
-                className="border border-dark form-control rounded "
-                disabled={edit}
+                type="text"
+                value={section}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                onChange={(e) => setSection(e.target.value)}
+                disabled={!isEditing}
               >
-                <option value={student[0]?.SECTION || ""} selected hidden>
-                  {student[0]?.SECTION || ""}
-                </option>
                 <option value="A">A</option>
                 <option value="B">B</option>
               </select>
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">STATUS</label>
-              <input
-                value={student[0]?.STATUS || ""}
+            <div className="col-sm-6 p-2">
+              <p className="p-0 m-0">STATUS</p>
+              <select
                 type="text"
-                className="border border-dark form-control rounded "
-                disabled={edit}
-              />
+                value={status}
+                className="col-12 rounded py-1 px-3 border border-dark"
+                disabled={!isEditing}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="Regular">Regular</option>
+                <option value="Irregular">Irregular</option>
+              </select>
             </div>
-            <div className="col-6 p-2 d-flex flex-column">
-              <label className="p-0">PASSWORD</label>
-              <input
-                value={student[0]?.PASSWORD || ""}
-                type="text"
-                className="border border-dark form-control rounded "
-                disabled={edit}
-              />
+            <div className="col-sm-6 p-2">
+              <p className="col-sm-6 p-0 m-0 align-self-center">PASSWORD:</p>
+              <a
+                className="col-sm-6 p-0 m-0 text-decoration-underline link-primary"
+                onClick={() => setWarning(!warning)}
+              >
+                Update Password
+              </a>
+            </div>
+            {isEditing && (
+              <div className="pt-3 text-center col-12">
+                <button
+                  type="submit"
+                  className="btn btn-light col-md-5 col-lg-2 border border-dark rounded text-center"
+                >
+                  SAVE
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+        {/* Modal */}
+        {warning && (
+          <div className="d-block modal bg-secondary" tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Warning</h5>
+                </div>
+                <div className="modal-body">
+                  <p className="text-center">
+                    It will lead you to the forget password and you need to
+                    re-login again, are you sure to do that?
+                  </p>
+                </div>
+                <div className="modal-footer align-self-center">
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    data-bs-dismiss="modal"
+                    onClick={() => setWarning(!warning)}
+                  >
+                    Cancel
+                  </button>
+                  <Link href="/Login/Password/ForgetPassword">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      data-bs-dismiss="modal"
+                    >
+                      Ok
+                    </button>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
-          <button className="btn btn-outline-dark" type="submit">
-            Save
-          </button>
-        </form>
+        )}
+        {/* end modal */}
       </section>
     </main>
   );

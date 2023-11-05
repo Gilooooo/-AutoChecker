@@ -1,5 +1,6 @@
 import { useTUPCID } from "@/app/Provider";
 import axios from "axios";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 function StudentTestList({clicked, setClicked}) {
@@ -16,6 +17,7 @@ function StudentTestList({clicked, setClicked}) {
     try {
         const response = await axios.get(`http://localhost:3001/StudentTestList?uidsection=${uidSection}`);
         if(response.status === 200){
+          console.log(response.data);
           try {
             const response1 = await axios.put(`http://localhost:3001/StudentTestList?uidStudent=${TUPCID}`, response.data[0]);
             if(response1.status === 200){
@@ -33,7 +35,12 @@ function StudentTestList({clicked, setClicked}) {
   }
 
   const fetchingStudentTest = async () => {
-
+     try {
+      const response = await axios.get(`http://localhost:3001/StudentSectionList?uidStudent=${TUPCID}`);
+      setTestList(response.data)
+     } catch (err) {
+      console.error(err)
+     }
   };
   useEffect(() => {
     const fetching = setInterval(() => {
@@ -137,9 +144,11 @@ function StudentTestList({clicked, setClicked}) {
               key={index}
             >
               <div className="d-flex justify-content-center">
-                <span>
-                  {test.TestName} {test.Enrolled_Uid_Section} {test.Enrolled_Subject}
+                <Link href={{pathname:"/Student/Result", query:`Uid=${test.Section_Uid}&Subject=${test.Section_Subject}`}} className="link-dark text-decoration-none"><span>
+                  {test.TestName} {test.Section_Uid} {test.Section_Subject}
                 </span>
+                </Link>
+                
               </div>
             </div>
           ))}

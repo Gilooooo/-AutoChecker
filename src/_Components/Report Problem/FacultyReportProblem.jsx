@@ -8,13 +8,16 @@ function FacultyReportProblem({ clicked, setClicked }) {
   const { TUPCID } = useTUPCID();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState(false);
 
   const fetchemail = async () => {
     try {
       const response = await axios.get(
         `http://localhost:3001/FacultyReportProblem?UidProf=${TUPCID}`
       );
-      setEmail(response.data);
+      if (response.status === 200) {
+        setEmail(response.data);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -30,10 +33,10 @@ function FacultyReportProblem({ clicked, setClicked }) {
         Information
       );
       if (response.status === 200) {
-        alert("SEND SUCCESSFULLY");
+        setSuccess(!success);
         setMessage("");
       } else {
-        alert("TRY AGAIN LATER");
+        alert("There is a problem, try again later");
       }
     } catch (err) {
       console.error(err);
@@ -89,6 +92,34 @@ function FacultyReportProblem({ clicked, setClicked }) {
             SEND
           </button>
         </form>
+        {/* Modal */}
+        {success && (
+          <div className="d-block modal bg-secondary" tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Success</h5>
+                </div>
+                <div className="modal-body">
+                  <p className="text-center">
+                    Your report will help the developer to find and fix the bug.
+                  </p>
+                </div>
+                <div className="modal-footer align-self-center">
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    data-bs-dismiss="modal"
+                    onClick={() => setSuccess(!success)}
+                  >
+                    Ok
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* end modal */}
       </section>
     </main>
   );
