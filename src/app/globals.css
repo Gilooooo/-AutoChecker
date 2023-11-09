@@ -39,7 +39,7 @@ input[type="number"]::-webkit-outer-spin-button {
 .custom-table-h {
   max-height: 60vh;
 }
-.custom-h-footer{
+.custom-h-footer {
   height: 5vh;
 }
 .custom-h {
@@ -55,18 +55,20 @@ input[type="number"]::-webkit-outer-spin-button {
 .custom-white-color {
   color: #f9f6f6;
 }
+.custom-gray{
+  background-color: #504c4c;
+}
 .custom-black-color {
   color: #0b0b0b;
 }
-.custom-button{
+.custom-button {
   font-weight: 500;
   font-size: 23px;
-  padding: 10px 20px ;
+  padding: 10px 20px;
   border: 1px solid #f9f6f6;
   border-radius: 10px;
   background-color: #f9f6f6;
   color: #c51e3a;
-
 }
 .custom-black-footer {
   opacity: 90%;
@@ -88,13 +90,16 @@ input[type="number"]::-webkit-outer-spin-button {
 .custom-h-landing-3 {
   height: 60vh;
 }
+.custom-h-landing-4 {
+  height: 50vh;
+}
 .custom-display {
   font-size: 80px;
 }
 .custom-display-2 {
   font-size: 100px;
 }
-.custom-fs{
+.custom-fs {
   font-size: 30px;
 }
 .custom-h-image {
@@ -107,89 +112,108 @@ input[type="number"]::-webkit-outer-spin-button {
 a {
   cursor: pointer;
 }
-.lines1{
+.line-aboutus{
+  width: 70px;
+  height: 1px;
+  background-color: white;
+}
+.lines1 {
   position: relative;
-  
   left: 0;
   bottom: 0px;
   width: 70px;
   height: 2px;
   background-color: white;
-  transition: .1s ease-in-out;
+  transition: 0.1s ease-in-out;
 }
-.lines2{
+.lines2 {
   position: relative;
   left: 0;
   bottom: 0px;
   width: 20px;
   height: 2px;
   background-color: white;
-  transition: .1s ease-in-out;
+  transition: 0.1s ease-in-out;
 }
-.lines3{
+.lines3 {
   position: relative;
-  transition: .1s ease-in-out;
+  transition: 0.1s ease-in-out;
   left: 0;
   bottom: 0px;
   width: 10px;
   height: 2px;
   background-color: white;
 }
-.custom-arrow{
+.custom-arrow {
   right: 40px;
   bottom: 30px;
 }
-@media screen and (max-width: 1050px) {  
-  .custom-display-2{
+@media screen and (max-width: 1050px) {
+  .custom-display-2 {
     font-size: 80px;
   }
-  .custom-fs{
+  .custom-fs {
     font-size: 25px;
   }
 }
 
-@media screen and (max-width: 865px) {  
-  .custom-display-2{
+@media screen and (max-height: 770px) {
+  .custom-h-landing-3 {
+    height: 80vh;
+  }
+}
+
+@media screen and (max-height: 600px) {
+  .custom-h-landing-3 {
+    height: 90vh;
+  }
+  .custom-h-landing-2 {
+    height: 70vh;
+  }
+}
+
+@media screen and (max-width: 865px) {
+  .custom-display-2 {
     font-size: 70px;
   }
-  .custom-fs{
+  .custom-fs {
     font-size: 20px;
   }
 }
-@media screen and (max-width: 770px) {  
-  .custom-display{
+@media screen and (max-width: 770px) {
+  .custom-display {
     font-size: 60px;
   }
-  .custom-display-2{
+  .custom-display-2 {
     font-size: 80px;
   }
-  .custom-fs{
+  .custom-fs {
     font-size: 25px;
   }
-  .custom-h-landing-2{
+  .custom-h-landing-2 {
     height: 80vh;
   }
-  .lines1{
+  .lines1 {
     position: absolute;
     left: 20;
     top: 0px;
     width: 2px;
     height: 50px;
     background-color: white;
-    transition: .1s ease-in-out;
+    transition: 0.1s ease-in-out;
   }
-  .lines2{
+  .lines2 {
     position: absolute;
     left: 20;
-    top:60px;
+    top: 60px;
     width: 2px;
     height: 10px;
     background-color: white;
-    transition: .1s ease-in-out;
+    transition: 0.1s ease-in-out;
   }
-  .lines3{
+  .lines3 {
     position: absolute;
-    transition: .1s ease-in-out;
+    transition: 0.1s ease-in-out;
     left: 20;
     top: 80px;
     width: 2px;
@@ -209,19 +233,22 @@ a {
   .custom-eye {
     right: 35px;
   }
-  .custom-h-landing-2{
+  .custom-h-landing-2 {
     height: 80vh;
   }
-  .custom-display{
+  .custom-display {
     font-size: 50px;
   }
-  .custom-h-landing{
+  .custom-h-landing {
     height: 50vh;
   }
-  .custom-h-landing-3{
-    height: 65vh;
+  .custom-h-landing-3 {
+    height: 55vh;
   }
-  .custom-display-2{
+  .custom-h-landing-4{
+    height: 60vh;
+  }
+  .custom-display-2 {
     font-size: 70px;
   }
   .custom-shadow {

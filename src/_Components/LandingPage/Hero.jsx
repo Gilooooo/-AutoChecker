@@ -8,7 +8,7 @@ function Hero() {
             OF TEST PAPER
           </h1>
           <span className="fs-4 custom-white-color fw-light">
-            Fast and Reliable. <br /> Exclusive only for TUPC Students
+            Fast and Reliable. <br /> Simple and Compact.
           </span>
         </div>
         <img

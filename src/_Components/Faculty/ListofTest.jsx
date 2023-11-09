@@ -12,6 +12,7 @@ function ListOfTest({ setClicked, clicked }) {
   const [section, setSection] = useState("");
   const [List, setList] = useState([]);
   const [message, setMessage] = useState("");
+  const [semester, setSemester] = useState("");
   const [sectionSubjectName, setSectionSubjectName] = useState([]);
 
   const add = async () => {
@@ -21,8 +22,9 @@ function ListOfTest({ setClicked, clicked }) {
       UidTest: uid,
       SectionName: section,
       UidProf: TUPCID,
+      Semester: semester,
     };
-    if (TestName != "" && Subject != "" && section != "" && uid != "") {
+    if (TestName != "" && Subject != "" && section != "" && uid != "" && semester != "") {
       setMessage("");
       try {
         const response = await axios.post(
@@ -35,6 +37,7 @@ function ListOfTest({ setClicked, clicked }) {
       } catch (err) {
         throw err;
       }
+      setSemester("");
       setTestName("");
       setSubject("");
       setSection("");
@@ -92,7 +95,7 @@ function ListOfTest({ setClicked, clicked }) {
       console.error(err);
     }
   };
-  
+
   const fetchingTestList = async () => {
     try {
       const response = await axios.get(
@@ -231,6 +234,19 @@ function ListOfTest({ setClicked, clicked }) {
                         ))}
                       </select>
                     </div>
+                    <p className="m-0">Semester</p>
+                    <select
+                      type="text"
+                      className="px-3 py-1 border border-dark rounded col-12"
+                      onChange={(e) => setSemester(e.target.value)}
+                    >
+                      <option value="" selected hidden disabled>
+                        Choose...
+                      </option>
+                      <option value="Prelimenary">Prelimenary</option>
+                      <option value="Midterm">Midterm</option>
+                      <option value="FinalTerm">FinalTerm</option>
+                    </select>
                     <p className="m-0">UID</p>
                     <div className="row m-0 gap-sm-3 gap-2">
                       <input
