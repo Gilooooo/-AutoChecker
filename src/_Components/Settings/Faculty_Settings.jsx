@@ -16,6 +16,13 @@ export default function FacultySettings({clicked, setClicked}) {
   const [isEditing, setIsEditing] = useState(false);
   const [initialFacultyInfo, setInitialInfo] = useState({});
   const [warning, setWarning] = useState(false)
+  const departments = {
+    DIT:"Department of Industrial Technology",
+    DED:"Department of Industrial Education",
+    DES:"Department of Engineering Sciences",
+    DLA:"Department of Liberal Arts",
+    DMS:"Department of Mathematics and Sciences"
+}
 
   useEffect(() => {
     const fetchFacultyInfo = async () => {
@@ -46,11 +53,10 @@ export default function FacultySettings({clicked, setClicked}) {
         setSurName(SURNAME);
         setGsfeacc(GSFEACC);
         setSubjectdept(SUBJECTDEPT);
-
         // Set initial faculty information
         setInitialInfo(initialFacultyInfo);
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     };
     // Call the function to fetch data
@@ -196,13 +202,12 @@ export default function FacultySettings({clicked, setClicked}) {
               </p>
               <select
                 type="text"
-                value={subjectdept}
                 className="col-sm-6 rounded py-1 px-3 border border-dark"
                 disabled={!isEditing}
                 onChange={(e) => setSubjectdept(e.target.value)}
               >
-                <option value="none" disabled hidden>
-                  Choose...
+                <option value={subjectdept} selected disabled hidden>
+                  {departments[subjectdept]}
                 </option>
                 <option value="DIT">Department of Industrial Technology</option>
                 <option value="DED">Department of Industrial Education</option>

@@ -140,7 +140,7 @@ function StudentTestList({clicked, setClicked}) {
         <div className="row m-0 mt-4 col-12 gap-1">
           {testList.map((test, index) => (
             <div
-              className="px-3 py-2 border border-dark rounded col-12"
+              className="px-3 py-2 border border-dark rounded col-12 r"
               key={index}
             >
               <div className="d-flex justify-content-center">

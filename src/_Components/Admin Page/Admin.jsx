@@ -1,19 +1,28 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+function AdminDashboard({clicked, setClicked}) {
 
-function AdminDashboard() {
-  const params = useSearchParams();
-  const Username = params.get("Username");
+  const handleclick = () => {
+    setClicked(!clicked);
+  };
   return (
     <main className="p-0 vh-100 w-100">
-      <section className="contatiner col-12 pe-2 text-start  d-flex flex-column align-items-center justify-content-center">
-        <h2 className="align-self-start px-2 w-100 border-bottom border-dark py-1">ADMIN DASHBOARD</h2>
+      <section className="contatiner col-12 text-start  d-flex flex-column align-items-center justify-content-center">
+      <div className="d-flex w-100 align-items-center">
+          <div className="border-bottom border-dark py-1 ps-sm-0 ps-3">
+            <i
+              className="d-block d-sm-none bi bi-list fs-5 custom-red px-2 rounded "
+              onClick={handleclick}
+            ></i>
+          </div>
+          <h2 className="px-2 w-100 border-bottom border-dark py-1 m-0 pe-sm-0 pe-3 text-center text-sm-start">
+            ADMIN DASHBOARD
+          </h2>
+        </div>  
         <section className="container-fluid col-12">
-          <div className="row p-0">
+          <div className="row p-0 mt-2">
             <div className="col-6">
               <h2>WELCOME!</h2>
-              <h2>{Username}</h2>
             </div>
             <div className="col-6 d-flex flex-column gap-3 align-self-center ps-1 mb-2">
               <span className="border border-dark py-1 px-3 col-lg-5 col-md-7 col-8 rounded">

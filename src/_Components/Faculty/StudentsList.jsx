@@ -129,7 +129,7 @@ function StudentsList({ clicked, setClicked }) {
             {Section}
           </h2>
         </div>
-        <div className="d-flex justify-content-between align-items-center w-100 px-2">
+        <div className="d-flex justify-content-between align-items-center w-100 px-1">
           <span className="m-0 border border-dark px-2 py-1 rounded fs-4">
             <span className="pe-2">{Uid_Section}</span>
             {copyClick ? (
@@ -190,7 +190,7 @@ function StudentsList({ clicked, setClicked }) {
         </div>
         {students.map((items, index) => (
           <div className="row m-0 mt-2 col-12" key={index}>
-            <div className="d-flex gap-2">
+            <div className="d-flex gap-2 px-1">
               <div className="border border-dark rounded px-2 py-1 w-100">
                 <span>
                   {items.Student_TUPCID}, {items.Student_FirstName}{" "}

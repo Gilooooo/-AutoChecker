@@ -23,7 +23,7 @@ function StudentSettings({ clicked, setClicked }) {
     const fetchstudentdate = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3001/studinfos/${TUPCID}`
+          `http://localhost:3001/studinfos?TUPCID=${TUPCID}`
         );
         const {
           FIRSTNAME,
@@ -58,10 +58,9 @@ function StudentSettings({ clicked, setClicked }) {
         setYear(YEAR);
         setStatus(STATUS);
         setGsfeacc(GSFEACC);
-
         setInitialInfo(initialStudentInfo);
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     };
     fetchstudentdate();

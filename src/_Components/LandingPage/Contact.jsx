@@ -37,7 +37,7 @@ function Contact({ scrollToTop }) {
         <h1 onClick={() => console.log(email)}>FOUND A BUG?</h1>
         <p className="m-0 fs-sm-3 fs-4 fw-light">
           SUBMIT A REPORT OR EMAIL US ON{" "}
-          <span className="link-primary">endingsonly@gmail.com</span>
+          <span className="link-primary">eosteam22@gmail.com</span>
         </p>
         <form className="d-flex flex-column gap-2">
           <input

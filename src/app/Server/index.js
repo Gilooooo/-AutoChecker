@@ -727,12 +727,12 @@ app.put("/updatefacultyinfos/:TUPCID", async (req, res) => {
       }
     );
   } catch (error) {
-    console.log(error);
+    return res.status(500).send({ message: "Failed to fetch TUPCID" });
   }
 });
 
-app.get("/studinfos/:TUPCID", async (req, res) => {
-  const { TUPCID } = req.params;
+app.get("/studinfos", async (req, res) => {
+  const { TUPCID } = req.query;
   try {
     const query = "SELECT * from student_accounts WHERE uid = ?";
     const [getall] = await connection.query(query, [TUPCID]);

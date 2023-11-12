@@ -87,7 +87,7 @@ function Aside_Student({ clicked, setClicked }) {
       >
         <div className="h-100 d-flex flex-column justify-content-between align-items-center py-1">
           <div className="d-flex align-items-center">
-            <img src="/TUPC.svg" alt="TUPC" height={70} width={70} />
+            <img src="/TUPC.svg" alt="TUPC" height={70} width={70} className="custom-shadow-2"/>
             <div className="d-flex flex-column custom-black-color ps-2">
               <small className="text-wrap">{information.FullName}</small>
               <small>{information.Tupcid}</small>

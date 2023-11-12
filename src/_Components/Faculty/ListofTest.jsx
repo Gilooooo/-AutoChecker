@@ -13,6 +13,7 @@ function ListOfTest({ setClicked, clicked }) {
   const [List, setList] = useState([]);
   const [message, setMessage] = useState("");
   const [semester, setSemester] = useState("");
+  const [exam, setExam] = useState("");
   const [sectionSubjectName, setSectionSubjectName] = useState([]);
 
   const add = async () => {
@@ -22,9 +23,16 @@ function ListOfTest({ setClicked, clicked }) {
       UidTest: uid,
       SectionName: section,
       UidProf: TUPCID,
-      Semester: semester,
+      Semester: semester + ":" + exam,
     };
-    if (TestName != "" && Subject != "" && section != "" && uid != "" && semester != "") {
+    if (
+      TestName != "" &&
+      Subject != "" &&
+      section != "" &&
+      uid != "" &&
+      semester != "" &&
+      exam != ""
+    ) {
       setMessage("");
       try {
         const response = await axios.post(
@@ -207,7 +215,7 @@ function ListOfTest({ setClicked, clicked }) {
                       onChange={(e) => setSubject(e.target.value)}
                       className="px-3 py-1 rounded border border-dark col-12"
                     >
-                      <option value="" selected hidden disabled>
+                      <option  selected hidden disabled>
                         Choose...
                       </option>
                       {sectionSubjectName.map((subject, index) => (
@@ -224,7 +232,7 @@ function ListOfTest({ setClicked, clicked }) {
                         className="py-1 px-3 rounded border border-dark"
                         onChange={(e) => setSection(e.target.value)}
                       >
-                        <option value="" selected hidden disabled>
+                        <option  selected hidden disabled>
                           Choose...
                         </option>
                         {sectionSubjectName.map((sections, index) => (
@@ -236,16 +244,26 @@ function ListOfTest({ setClicked, clicked }) {
                     </div>
                     <p className="m-0">Semester</p>
                     <select
-                      type="text"
                       className="px-3 py-1 border border-dark rounded col-12"
                       onChange={(e) => setSemester(e.target.value)}
                     >
-                      <option value="" selected hidden disabled>
+                      <option  selected hidden disabled>
                         Choose...
                       </option>
-                      <option value="Prelimenary">Prelimenary</option>
+                      <option value="1st Semester">1st Semester</option>
+                      <option value="2nd Semester">2nd Semester</option>
+                    </select>
+                    <p className="m-0">Exam</p>
+                    <select
+                      className="px-3 py-1 border border-dark rounded col-12"
+                      onChange={(e) => setExam(e.target.value)}
+                    >
+                      <option  selected hidden disabled>
+                        Choose...
+                      </option>
+                      <option value="Prelim">Prelim</option>
                       <option value="Midterm">Midterm</option>
-                      <option value="FinalTerm">FinalTerm</option>
+                      <option value="Final">Final</option>
                     </select>
                     <p className="m-0">UID</p>
                     <div className="row m-0 gap-sm-3 gap-2">

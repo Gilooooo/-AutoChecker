@@ -48,12 +48,14 @@ function UpdatePassword() {
           className="row justify-content-center gap-2"
           onSubmit={handleSubmit(submitForm)}
         >
-          <input
-            type="password"
-            className="col-9 text-center form-control border border-dark rounded"
-            placeholder="New Password"
-            {...register("NewPassword")}
-          />
+          <div className="row col-9 p-0">
+            <input
+              type="password"
+              className="col-9 text-center form-control border border-dark rounded"
+              placeholder="New Password"
+              {...register("NewPassword")}
+            />
+          </div>
           <small className="text-danger text-center">
             {errors.NewPassword?.message}
           </small>
@@ -64,19 +66,19 @@ function UpdatePassword() {
               placeholder="Confirm Password"
               {...register("ConfirmPassword")}
             />
-                {showPassword ? (
-                <i
+            {showPassword ? (
+              <i
                 onClick={() => setShowpassword(!showPassword)}
-                  className="bi bi-eye-slash custom-black-color fs-4 position-absolute"
-                  style={{ width: "36px", right:"10px"}}
-                ></i>
-              ) : (
-                <i
-                  onClick={() => setShowpassword(!showPassword)}
-                  className="bi bi-eye custom-black-color fs-4 position-absolute"
-                  style={{ width: "36px", right:"10px"}}
-                ></i>
-              )}
+                className="bi bi-eye-slash custom-black-color fs-4 position-absolute"
+                style={{ width: "36px", right: "10px" }}
+              ></i>
+            ) : (
+              <i
+                onClick={() => setShowpassword(!showPassword)}
+                className="bi bi-eye custom-black-color fs-4 position-absolute"
+                style={{ width: "36px", right: "10px" }}
+              ></i>
+            )}
           </div>
           <small className="text-danger text-center">
             {errors.ConfirmPassword?.message}
@@ -87,10 +89,7 @@ function UpdatePassword() {
         </form>
       </section>
       {showmodal && (
-        <div
-          className="d-block modal bg-secondary"
-          tabIndex="-1"
-        >
+        <div className="d-block modal bg-secondary" tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">

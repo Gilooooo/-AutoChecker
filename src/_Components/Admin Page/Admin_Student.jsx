@@ -32,15 +32,15 @@ function Admin_Student({ clicked, setClicked }) {
   );
   return (
     <main className="w-100 p-0 vh-100 align-items-start">
-      <section className="contatiner col-12 pe-2 text-sm-start text-center d-flex flex-column align-items-center justify-content-center">
-        <div className="d-flex w-100 align-items-center">
-          <div className="border-bottom border-dark py-1">
+      <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-center justify-content-center">
+        <div className="d-flex w-100 align-items-center ">
+          <div className="border-bottom border-dark py-1 ps-sm-0 ps-3">
             <i
               className="d-block d-sm-none bi bi-list fs-5 custom-red px-2 rounded "
               onClick={handleclick}
             ></i>
           </div>
-          <h2 className="px-2 w-100 border-bottom border-dark py-1 m-0">
+          <h2 className="px-2 w-100 border-bottom border-dark py-1 m-0 pe-sm-0 pe-3">
             STUDENT
           </h2>
         </div>

@@ -123,7 +123,7 @@ function FacultyRegistration() {
               className="col-sm-7 px-3 py-1 rounded border border-dark"
               {...register("SUBJECTDEPT")}
             >
-              <option value="" selected hidden disabled>
+              <option  selected hidden disabled>
                 Choose...
               </option>
               <option value="DIT">Department of Industrial Technology</option>

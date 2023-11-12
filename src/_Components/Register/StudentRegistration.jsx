@@ -124,7 +124,7 @@ function StudentRegistration() {
               className="col-sm-7 px-3 py-1 rounded border border-dark"
               {...register("COURSE")}
             >
-              <option value="" selected hidden disabled>
+              <option  selected hidden disabled>
                 Choose...
               </option>
               <option value="BSCE">BSCE</option>
@@ -153,7 +153,7 @@ function StudentRegistration() {
               className="col-sm-7 px-3 py-1 rounded border border-dark"
               {...register("SECTION")}
             >
-              <option value="" selected hidden disabled>
+              <option  selected hidden disabled>
                 Choose...
               </option>
               <option value="A">A</option>
@@ -171,7 +171,7 @@ function StudentRegistration() {
               className="col-sm-7 px-3 py-1 rounded border border-dark"
               {...register("YEAR")}
             >
-              <option value="" selected hidden disabled>
+              <option  selected hidden disabled>
                 Choose...
               </option>
               <option value="1ST">1ST</option>
@@ -189,7 +189,7 @@ function StudentRegistration() {
               className="col-sm-7 px-3 py-1 rounded border border-dark"
               {...register("STATUS")}
             >
-              <option value="" selected hidden disabled>
+              <option  selected hidden disabled>
                 Choose...
               </option>
               <option value="REGULAR">REGULAR</option>
