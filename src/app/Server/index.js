@@ -488,12 +488,13 @@ app.get("/TestListSectionName", async (req, res) => {
 });
 app.post("/TestList", async (req, res) => {
   const { TestName, Subject, UidTest, UidProf, SectionName, Semester } = req.body;
+  console.log(Semester)
   try {
     const infos = await getInfoProf(UidProf);
     const query1 =
-      "INSERT INTO faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Semester, Section_Name, Uid_Test, Uid_Professor, date_created) values (?, ? ,? ,?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+      "INSERT INTO faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Test, Uid_Professor, date_created) values (?, ? ,? ,?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     const query2 =
-      "INSERT INTO preset_faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Semester, Section_Name, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+      "INSERT INTO preset_faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     await connection.query(query1, [
       infos[0].FIRSTNAME,
       infos[0].MIDDLENAME,
@@ -502,8 +503,8 @@ app.post("/TestList", async (req, res) => {
       infos[0].TUPCID,
       TestName,
       Subject,
-      Semester,
       SectionName,
+      Semester,
       UidTest,
       UidProf,
     ]);
@@ -515,8 +516,8 @@ app.post("/TestList", async (req, res) => {
       infos[0].TUPCID,
       TestName,
       Subject,
-      Semester,
       SectionName,
+      Semester,
       UidTest,
       UidProf,
     ]);
