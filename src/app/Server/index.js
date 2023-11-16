@@ -7,7 +7,9 @@ const cookieParser = require("cookie-parser");
 const bcryptjs = require("bcryptjs");
 const connection = require("./database");
 const nodemailer = require("nodemailer");
-
+const officegen = require('officegen');
+const romanize = require('romanize');
+const PDFDocument = require('pdfkit');
 const app = express();
 
 app.use(bodyParser.json());
@@ -728,12 +730,12 @@ app.put("/updatefacultyinfos/:TUPCID", async (req, res) => {
       }
     );
   } catch (error) {
-    return res.status(500).send({ message: "Failed to fetch TUPCID" });
+    console.log(error);
   }
 });
 
-app.get("/studinfos", async (req, res) => {
-  const { TUPCID } = req.query;
+app.get("/studinfos/:TUPCID", async (req, res) => {
+  const { TUPCID } = req.params;
   try {
     const query = "SELECT * from student_accounts WHERE uid = ?";
     const [getall] = await connection.query(query, [TUPCID]);
@@ -795,6 +797,861 @@ app.put("/updatestudentinfos/:TUPCID", async (req, res) => {
     console.log(error);
   }
 });
+
+
+app.post('/createtestpaper', async (req, res) => {
+  try {
+    const {
+      TUPCID,
+      UID,
+      test_name,
+      section_name,
+      semester,
+      data, 
+    } = req.body;
+    console.log('Check receiving data....', TUPCID);
+
+   
+    const query = `
+      INSERT INTO testpapers 
+      (Professor_ID, UID_test, test_name, section_name, semester, questions, test_created) 
+      VALUES (?, ?, ?, ?, ?,?, NOW())
+    `;
+
+    const values = [
+      TUPCID,
+      UID,
+      test_name,
+      section_name,
+      semester,
+      JSON.stringify(data), 
+    ];
+
+    await connection.query(query, values);
+
+
+    res.status(200).json({ message: 'Data added to the test successfully' });
+  } catch (error) {
+    console.error('Error adding data to the test:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+  }
+});
+
+
+app.put("/updatetestpaper/:TUPCID/:uid/:section_name", async (req, res) => {
+  try {
+    const { TUPCID, uid, section_name } = req.params; 
+    const { data } = req.body;
+    const updateQuery = `
+      UPDATE testpapers
+      SET
+        questions = ?,
+        test_created = NOW() 
+      WHERE Professor_ID = ? AND UID_test = ? AND section_name = ?;
+    `;
+
+    const updateValues = [
+      JSON.stringify(data), 
+      TUPCID,
+      uid,
+      section_name
+    ];
+
+    await connection.query(updateQuery, updateValues);
+
+    res.status(200).json({ message: 'Data updated successfully' });
+  } catch (error) {
+    console.error('Error updating data:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+  }
+});
+
+
+app.get('/generateTestPaperpdf/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params; 
+
+    
+    const query = `
+      SELECT questions, semester, test_name FROM testpapers WHERE UID_test = ?;
+    `;
+    console.log("response....", uid);
+    
+    const [testdata] = await connection.query(query, [uid]);
+    console.log("response....", testdata);
+    
+    const questionsData = testdata[0].questions;
+    const test_name = testdata[0].test_name;
+    const semester = testdata[0].semester;
+   
+
+    // Create a new PDF document
+    const doc = new PDFDocument();
+    const filename = ` ${test_name}.pdf`;
+
+    // Set the title based on TEST NUMBER and TEST NAME
+    const title = doc.text(`${semester} ${test_name} UID:${uid}`, {
+      bold: true,
+      underline: true,
+      fontSize: 24,
+      align: 'center',
+    });
+    doc.moveDown();
+    doc.text(`Follow the directions and STRICTLY NO ERASURE.`)
+    doc.moveDown();
+    // Create an object to store questions grouped by questionType
+    const groupedQuestions = {};
+
+    // Group questions by questionType
+    questionsData.forEach((item, index) => {
+      const questionType = item.questionType;
+      const question = item.question;
+      const options = item.options;
+      const score = item.score;
+
+      // Check if both questionType and question are defined and not empty
+      if (questionType && question) {
+        if (!groupedQuestions[questionType]) {
+          groupedQuestions[questionType] = [];
+        }
+        groupedQuestions[questionType].push({ question, options,score });
+      }
+    });
+
+    // Create a counter to track the number of unique question types
+    let testCounter = 1;
+
+    // Iterate through the grouped questions and add them to the PDF document
+    for (const questionType in groupedQuestions) {
+      const questionsOfType = groupedQuestions[questionType];
+      if (questionsOfType.length > 0) {
+        // Convert the testCounter to a Roman numeral
+        const romanNumeral = romanize(testCounter);
+
+        // Determine the display text based on question type
+        let displayText = '';
+        let instructions = '';
+        if (questionType === 'MultipleChoice') {
+          displayText = 'Multiple Choice';
+          instructions = 'Among the given OPTIONS in the questionnaire, choose the best option and write it in CAPITAL LETTER.';
+        } else if (questionType === 'TrueFalse') {
+          displayText = 'TRUE or FALSE';
+          instructions = 'Write T if the statement is TRUE or F if the statement is FALSE.';
+        } else if (questionType === 'Identification') {
+          displayText = 'Identification';
+          instructions = 'Write the ANSWER in CAPITAL LETTER.';
+        }
+
+        const score = questionsOfType[0].score;
+        doc.moveDown();
+        const questionTypeHeading = doc.text(`TEST ${romanNumeral}. ${displayText} (${score} pts. each)`, {
+          bold: true,
+          fontSize: 16,
+          color: 'black',
+        });
+        
+        
+
+        // Add the instructions
+        const instructionParagraph = doc.text(instructions, {
+          fontSize: 12,
+          color: 'black',
+        });
+
+        doc.moveDown();
+        let questionNumber = 1; // Initialize question number
+
+        questionsOfType.forEach((questionData, index) => {
+          // Check if a new column should be started
+          if (index > 0 && index % 10 === 0) {
+            questionTypeHeading.addPage(); // Start a new page
+          }
+
+          const questionParagraph = doc.text(`${questionNumber}. ${questionData.question}`);
+          doc.moveDown(0.5);
+
+          // Add the question text or options as needed
+          if (questionType === 'MultipleChoice') {
+            if (questionData.options && questionData.options.length > 0) {
+              const optionsText = questionData.options
+                .map((option, optionIndex) => ` ${String.fromCharCode(97 + optionIndex)}.) ${option.text}\n`)
+                .join(''); // Join options with a newline character
+          
+              doc.text(optionsText);
+            }
+            doc.moveDown(); 
+          }
+          
+
+          questionNumber++; // Increment question number
+          doc.moveDown();
+        });
+
+        testCounter++;
+        doc.moveDown(); // Increment testCounter for the next type
+      }
+    }
+
+    // Pipe the PDF to the response stream
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+
+    // Finalize the PDF and end the response stream
+    doc.end();
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    res.status(500).send('Error generating PDF');
+  }
+});
+
+
+app.get('/generateTestPaperdoc/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params; // Extract parameters from URL
+
+    // Fetch data from the database based on the parameters
+    const query = `
+      SELECT questions, test_name, semester FROM testpapers WHERE UID_test = ?;
+    `;
+
+    const [testdata] = await connection.query(query, [uid]);
+
+    // Extract the questions, test_number, and test_name from the database response
+    const questionsData = testdata[0].questions;
+    const test_name = testdata[0].test_name;
+    const semester = testdata[0].semester;
+
+    // Create a new Word document
+    const docx = officegen('docx');
+    const filename = `${test_name}.docx`;
+
+    // Define a function to add a paragraph with a specific style
+    function addStyledParagraph(text, style) {
+      const paragraph = docx.createP();
+      paragraph.addText(text, style);
+    }
+
+    const title = `${semester}  ${test_name} UID: ${uid}`;
+  docx.createP().addText(title, {
+  bold: true,
+  fontSize: 16,
+  color: 'black',
+  
+});
+
+    // Create an object to store questions grouped by questionType
+    const groupedQuestions = {};
+
+    // Group questions by questionType
+    questionsData.forEach((item) => {
+      const questionType = item.questionType;
+      const question = item.question;
+      const options = item.options;
+      const score = item.score;
+
+      // Check if both questionType and question are defined and not empty
+      if (questionType && question) {
+        if (!groupedQuestions[questionType]) {
+          groupedQuestions[questionType] = [];
+        }
+        groupedQuestions[questionType].push({ question, options, score });
+      }
+    });
+
+    // Create a counter to track the number of unique question types
+    let testCounter = 1;
+
+    // Iterate through the grouped questions and add them to the Word document
+    for (const questionType in groupedQuestions) {
+      const questionsOfType = groupedQuestions[questionType];
+      if (questionsOfType.length > 0) {
+        // Convert the testCounter to a Roman numeral
+        const romanNumeral = romanize(testCounter);
+
+        // Determine the display text based on question type
+        let displayText = '';
+        let instructions = '';
+        if (questionType === 'MultipleChoice') {
+          displayText = 'Multiple Choice';
+          instructions = 'Among the given OPTIONS in the questionnaire, choose the best option and write it in CAPITAL LETTER.';
+        } else if (questionType === 'TrueFalse') {
+          displayText = 'TRUE or FALSE';
+          instructions = 'Write T if the statement is TRUE or F if the statement is FALSE.';
+        } else if (questionType === 'Identification') {
+          displayText = 'Identification';
+          instructions = 'Write the ANSWER in CAPITAL LETTER.';
+        }
+
+        const score = questionsOfType[0].score;
+        docx.createP().addText(`TEST ${romanNumeral}. ${displayText} (${score} pts. each)`, {
+          bold: true,
+          fontSize: 16,
+          color: 'black',
+        });
+
+        docx.createP().addText(`Follow the directions and STRICTLY NO ERASURE.`)
+
+        addStyledParagraph(instructions, {
+          fontSize: 12,
+          color: 'black',
+        });
+
+        let questionNumber = 1; // Initialize question number
+
+        questionsOfType.forEach((questionData, index) => {
+          if (index > 0 && index % 10 === 0) {
+            // Start a new page
+            docx.createP().pageBreak();
+          }
+
+          addStyledParagraph(`${questionNumber}. ${questionData.question}`, {
+            color: 'black',
+          });
+
+          if (questionType === 'MultipleChoice') {
+            if (questionData.options && questionData.options.length > 0) {
+              questionData.options.forEach((option, optionIndex) => {
+                addStyledParagraph(`  ${String.fromCharCode(97 + optionIndex)}.) ${option.text}`, {
+                  color: 'black',
+                });
+              });
+            }
+          }
+
+          questionNumber++; // Increment question number
+        });
+
+        testCounter++; // Increment testCounter for the next type
+      }
+    }
+
+    // Pipe the Word document to the response stream for download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    docx.generate(res);
+  } catch (error) {
+    console.error('Error generating Word document:', error);
+    res.status(500).send('Error generating Word document');
+  }
+});
+
+
+app.get('/getquestionstypeandnumber/:TUPCID/:uid', async (req, res) => {
+  const { TUPCID, uid } = req.params;
+
+ 
+
+  try {
+    // Construct the SQL query to retrieve the questions data
+    const query = `
+      SELECT questions
+      FROM testpapers
+      WHERE Professor_ID = ? AND UID_test = ?;
+    `;
+
+    // Execute the query with the provided parameters
+    const [testdata] = await connection.query(query, [TUPCID, uid]);
+
+    if (testdata.length >= 1) {
+      console.log("Found test data for UID:", uid);
+
+      // Extract questions data from the response
+      const questionsData = testdata[0].questions;
+
+      // Extract questionNumber and questionType from questionsData
+      const questionNumbers = questionsData.map((question) => question.questionNumber);
+      const questionTypes = questionsData.map((question) => question.questionType);
+
+      // Construct the response object with questionNumber and questionType
+      const responseData = {
+        questionNumbers,
+        questionTypes,
+      };
+
+      res.status(200).json(responseData);
+    } else {
+      console.log("Test data not found for UID:", uid);
+      res.status(404).json({ error: 'test data not found' });
+    }
+  } catch (error) {
+    console.error('Error retrieving test data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/generateAnswerSheet/:uid/:sectionname/', async (req, res) => {
+  try {
+    const { uid, sectionname } = req.params; // Extract parameters from the URL
+
+    console.log("uid:", uid)
+    console.log("sectionname:", sectionname)
+    // Fetch data from the database based on the parameters
+    const query = `
+      SELECT questions, test_name
+      FROM testpapers
+      WHERE UID_test = ?;
+    `;
+
+    const query2 = `
+      SELECT e.Student_TUPCID, s.FIRSTNAME, s.MIDDLENAME, s.SURNAME
+      FROM enrolled_sections e
+      INNER JOIN student_accounts s ON e.Student_TUPCID = s.TUPCID
+      WHERE e.section_name = ?;
+    `;
+
+    const query3 = `SELECT ;
+  `;
+
+    // Execute the first query to fetch data from 'testforstudents'
+    const [testData] = await connection.query(query, [uid]);
+
+    // Execute the second query to fetch data from 'enrollments' and 'student_accounts'
+    const [studentData] = await connection.query(query2, [sectionname]);
+
+    
+    const test_name = testData[0].test_name;
+  
+
+    // Create a new PDF document
+    const doc = new PDFDocument({
+      size: 'letter',
+      margins: {
+        top: 30,
+        bottom: 10,
+        left: 70,
+        right: 20,
+      }
+    });
+    const filename = `${test_name}.pdf`;
+
+    // Define the box size and spacing
+    const boxSize = 15;
+    const boxSpacing = 1;
+    const boxesPerQuestion = 10;
+    
+    // Define the line weight for boxes
+    const boxLineWeight = 0.50;
+    doc.fontSize(10);
+
+    const boxStrokeColor = '#818582';
+
+    // Iterate through studentData and add each student's information and answer sheet
+    for (const student of studentData) {
+      // Extract student information
+      const { Student_TUPCID, FIRSTNAME, SURNAME } = student;
+
+      // Define column widths and spacing
+      const columnWidth = 200;
+      doc.lineWidth(5);
+
+      // First rectangle information
+      doc.rect(70, 10, columnWidth + 299, 110).stroke();
+      doc.text(`${Student_TUPCID}`, 90, 30, { width: columnWidth, align: 'left', bold: true });
+      doc.text(`NAME: ${SURNAME}, ${FIRSTNAME}`, 90, 50, { width: columnWidth, align: 'left', bold: true });
+      doc.text(`TESTNAME: ${test_name}  UID: ${uid}`, 150, 70, { width: columnWidth + 100, align: 'center', bold: true });
+
+      const questionsData = testData[0].questions;
+      const groupedQuestions = {};
+
+      questionsData.forEach((item) => {
+        const questionType = item.questionType;
+        const type = item.type;
+
+        if (questionType) {
+          if (!groupedQuestions[questionType]) {
+            groupedQuestions[questionType] = [];
+          }
+          groupedQuestions[questionType].push({ questionNumber: item.questionNumber, type: item.type });
+        }
+      });
+
+      for (const questionType in groupedQuestions) {
+        const questionsOfType = groupedQuestions[questionType];
+
+        if (questionsOfType.length > 0) {
+          // Determine the display text based on question type
+          let displayText = ``;
+          
+
+          if (questionType === 'MultipleChoice') {
+            displayText = 'MULTIPLE CHOICE';
+          } else if (questionType === 'TrueFalse') {
+            displayText = 'TRUE OR FALSE';
+          } else if (questionType === 'Identification') {
+            displayText = 'IDENTIFICATION';
+          }
+
+          
+          let alignment = 'left';
+          if (questionsOfType[0].type === 'TYPE 2') {
+            typeoftest = 'TYPE 2';
+            alignment = 'center';
+          } else if (questionsOfType[0].type === 'TYPE 3') {
+            typeoftest = 'TYPE 3';
+            alignment = 'right';
+          }
+         
+
+          if (questionsOfType[0].type === 'TYPE 1' && questionType === 'MultipleChoice') {
+            doc.rect(70, 140, columnWidth - 100, 600).stroke().strokeColor('black');
+          } else if (questionsOfType[0].type === 'TYPE 1' && questionType === 'TrueFalse') {
+            doc.rect(70, 140, columnWidth - 60, 600).stroke().strokeColor('black');
+          } else if (questionsOfType[0].type === 'TYPE 1' && questionType === 'Identification') {
+            doc.rect(70, 140, columnWidth + 35, 600).stroke().strokeColor('black');
+          }
+
+          if (questionsOfType[0].type === 'TYPE 2' && questionType === 'MultipleChoice') {
+            doc.rect(70 + 165, 140, columnWidth - 60, 600).stroke().strokeColor('black');
+          } else if (questionsOfType[0].type === 'TYPE 2' && questionType === 'TrueFalse') {
+            doc.rect(70 + 130, 140, columnWidth - 100, 600).stroke().strokeColor('black');
+          } else if (questionsOfType[0].type === 'TYPE 2' && questionType === 'Identification') {
+            doc.rect(70 + 130, 140, columnWidth + 35, 600).stroke().strokeColor('black');
+          }
+
+          if (questionsOfType[0].type === 'TYPE 3' && questionType === 'MultipleChoice') {
+            doc.rect(70 + 330, 140, columnWidth - 60, 600).stroke().strokeColor('black');
+          } else if (questionsOfType[0].type === 'TYPE 3' && questionType === 'TrueFalse') {
+            doc.rect(70 + 330, 140, columnWidth - 60, 600).stroke().strokeColor('black');
+          } else if (questionsOfType[0].type === 'TYPE 3' && questionType === 'Identification') {
+            doc.rect(70 + 265, 140, columnWidth + 35, 600).stroke().strokeColor('black');
+          }
+
+          doc.lineWidth(5); // Set the line thickness back to the default value (adjust as needed)
+
+          doc.text(`${displayText}`, 90, 100, { width: columnWidth + 220, align: alignment });
+
+          doc.moveDown(6);
+
+          let questionNumber = 1; 
+          questionsOfType.forEach(() => {
+            if (questionNumber <= 9) {
+              if (questionType === 'Identification') {
+                doc.text(`${questionNumber}.  `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else if (questionType === 'TrueFalse') {
+                doc.text(`${questionNumber}.   `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else {
+                doc.text(`${questionNumber}.    `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 220,
+                  align: alignment,
+                });
+              }
+            }
+
+            if (questionNumber >= 10) {
+              if (questionType === 'Identification') {
+                doc.text(`${questionNumber}.  `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else if (questionType === 'TrueFalse') {
+                doc.text(`${questionNumber}.   `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else {
+                doc.text(`${questionNumber}.    `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 220,
+                  align: alignment,
+                });
+              }
+            }
+           
+
+            // BOXES
+            if (questionType === 'MultipleChoice' && questionsOfType[0].type === 'TYPE 1') {
+              doc.rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            } else if (questionType === 'Identification' && questionsOfType[0].type === 'TYPE 1') {
+              doc.rect(doc.x + 45 , doc.y - 19.5, 140, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            } else if (questionType === 'TrueFalse' && questionsOfType[0].type === 'TYPE 1') {
+              doc.rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            } else if(questionType === 'MultipleChoice' && questionsOfType[0].type === 'TYPE 2'){
+              doc.rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            } else if(questionType === 'Identification' && questionsOfType[0].type === 'TYPE 2'){
+              doc.rect(doc.x + 175, doc.y - 19.5, 140, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            } else if(questionType === 'TrueFalse' && questionsOfType[0].type === 'TYPE 2'){
+              doc.rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            } else if(questionType === 'MultipleChoice' && questionsOfType[0].type === 'TYPE 3'){
+              doc.rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            } else if(questionType === 'Identification' && questionsOfType[0].type === 'TYPE 3'){
+              doc.rect(doc.x + 320, doc.y - 19.5, 140, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            }else if(questionType === 'TrueFalse' && questionsOfType[0].type === 'TYPE 3'){
+              doc.rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke('#adb8af')
+                .strokeColor('black');
+            }
+
+            
+            doc.fill('black')
+            doc.strokeColor('black');
+            doc.moveDown(1.30);
+            doc.lineWidth(5);
+            questionNumber++;
+          });
+        }
+      }
+      doc.lineWidth(5);
+      
+      doc.moveDown(4);
+
+      // Add a page break for the next student (except for the last one)
+      if (student !== studentData[studentData.length - 1]) {
+        doc.addPage();
+      }
+    }
+
+    // Pipe the PDF to the response stream
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+
+    // Finalize the PDF and end the response stream
+    doc.end();
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    res.status(500).send('Error generating PDF');
+  }
+});
+
+
+
+
+app.get('/getquestionstypeandnumberandanswer/:uid', async (req, res) => {
+  const {  uid } = req.params;
+
+  console.log("uid:", uid);
+  
+
+  try {
+    // Construct the SQL query to retrieve the questions data
+    const query = `
+      SELECT questions
+      FROM testpapers
+      WHERE UID_test = ?;
+    `;
+
+    // Execute the query with the provided parameters
+    const [testdata] = await connection.query(query, [ uid]);
+
+    if (testdata.length >= 1) {
+      console.log("Found test data for UID:", uid);
+
+      // Extract questions data from the response
+      const questionsData = testdata[0].questions;
+
+      // Extract questionNumber, questionType, and answer from questionsData
+      const questionNumbers = questionsData.map((question) => question.questionNumber);
+      const questionTypes = questionsData.map((question) => question.questionType);
+      const answers = questionsData.map((question) => question.answer);
+
+      // Construct the response object with questionNumber, questionType, and answers
+      const responseData = {
+        questionNumbers,
+        questionTypes,
+        answers,
+      };
+
+      res.status(200).json(responseData);
+    } else {
+      console.log("Test data not found for UID:", uid);
+      res.status(404).json({ error: 'test data not found' });
+    }
+  } catch (error) {
+    console.error('Error retrieving test data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+app.post('/results', async (req, res) => {
+  try {
+    const { TUPCID, UID, questionType, answers } = req.body;
+
+    // Insert data into the database
+    const query = `
+      INSERT INTO results
+      (TUPCID, UID, questionType, answers, results_takendate) 
+      VALUES (?, ?, ?, ?, NOW())
+    `;
+
+    const values = [
+      TUPCID || null,
+      UID || null,
+      JSON.stringify(questionType), 
+      JSON.stringify(answers),      
+    ];
+
+    await connection.query(query, values);
+
+    // Respond with a success message
+    res.status(200).json({ message: 'Data added to the database successfully' });
+  } catch (error) {
+    console.error('Error adding data to the database:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+  }
+});
+
+
+app.get('/getstudentanswers/:studentid/:uid', async (req, res) => {
+  const { studentid, uid } = req.params;
+
+  try {
+    // Construct the SQL query to retrieve the student answers data
+    const query = `
+    SELECT answers
+    FROM results
+    WHERE TUPCID = ? AND UID = ?;
+  `;
+
+    // Execute the query with the provided parameters
+    const [studentAnswerData] = await connection.query(query, [studentid, uid]);
+
+    if (studentAnswerData.length >= 1) {
+      console.log("Found student answer data for UID:", uid);
+      console.log("Found student answer data for TUPCID:", studentid);
+
+      // Extract student answers data from the response
+      const studentAnswers = studentAnswerData[0].answers; 
+
+      const questionNumbers = studentAnswers.map((answer) => answer.questionNumber);
+      const questionTypes = studentAnswers.map((answer) => answer.type);
+      const answers = studentAnswers.map((answer) => answer.answer);
+
+      // Construct the response object with student answers
+      const responseData = {
+        questionNumbers,questionTypes, answers
+      };
+      console.log("check response:", responseData)
+      res.status(200).json(responseData);
+    } else {
+      console.log("Student answer data not found for UID:", uid);
+      res.status(404).json({ error: 'student answer data not found' });
+    }
+  } catch (error) {
+    console.error('Error retrieving student answer data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/compareanswers/:uid', async (req, res) => {
+  const { uid } = req.params;
+
+  try {
+    // Fetch data from the testpapers and results tables
+    const [testpapersData] = await connection.query('SELECT questions FROM testpapers WHERE UID_test = ?', [uid]);
+    const [resultsData] = await connection.query('SELECT answers FROM results WHERE UID = ?', [uid]);
+
+    if (testpapersData.length >= 1 && resultsData.length >= 1) {
+      console.log("Found data for UID:", uid);
+
+      // Initialize variables to store scores and total score
+      let scores = {};
+      let totalScore = 0;
+
+      // Compare user's answers with correct answers and calculate scores
+      testpapersData.forEach((testpaper) => {
+        testpaper.questions.forEach((question) => {
+          const { type, score, answer, questionType, questionNumber } = question;
+
+          // Find the corresponding user's answer from resultsData
+          const userAnswerData = resultsData.find(result => result.type === `TYPE${question.type}` && result.questionNumber === questionNumber);
+
+          // Check if user's answer data is found
+          if (userAnswerData) {
+            const userAnswers = userAnswerData.answers;
+            console.log("check answrs:", userAnswers);
+
+            // Now you can use userAnswers in your calculations
+            let scoreForQuestion = 0;
+
+            userAnswers.forEach((userAnswer) => {
+              if (questionType === 'MultipleChoice' || questionType === 'TrueFalse') {
+                scoreForQuestion += userAnswer.answer.toUpperCase() === answer.toUpperCase() ? score : 0;
+              } else if (questionType === 'Identification') {
+                // For identification, convert both answers to uppercase before comparison
+                scoreForQuestion += userAnswer.answer.toUpperCase() === answer.toUpperCase() ? score : 0;
+              }
+            });
+
+            // Add the score for the question to the total score
+            totalScore += scoreForQuestion;
+
+            // Update the scores object
+            if (!scores[type]) {
+              scores[type] = { score: 0, total: 0, questions: [] };
+            }
+
+            scores[type].score += scoreForQuestion;
+            scores[type].total += score;
+            scores[type].questions.push({ questionNumber, score: scoreForQuestion }); // Add question details
+          } else {
+            console.error('User answer data not found for type:', type, 'and questionNumber:', questionNumber);
+          }
+        });
+      });
+
+      // Construct the response object with scores and totalScore
+      const responseData = {
+        scores,
+        totalScore,
+      };
+
+      res.status(200).json(responseData);
+    } else {
+      console.log("Data not found for UID:", uid);
+      res.status(404).json({ error: 'data not found' });
+    }
+  } catch (error) {
+    console.error('Error retrieving data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
 
 // Start the server
 app.listen(3001, () => {

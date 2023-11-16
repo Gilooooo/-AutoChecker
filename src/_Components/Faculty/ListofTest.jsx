@@ -215,7 +215,7 @@ function ListOfTest({ setClicked, clicked }) {
                       onChange={(e) => setSubject(e.target.value)}
                       className="px-3 py-1 rounded border border-dark col-12"
                     >
-                      <option  selected hidden disabled>
+                      <option selected hidden disabled>
                         Choose...
                       </option>
                       {sectionSubjectName.map((subject, index) => (
@@ -232,7 +232,7 @@ function ListOfTest({ setClicked, clicked }) {
                         className="py-1 px-3 rounded border border-dark"
                         onChange={(e) => setSection(e.target.value)}
                       >
-                        <option  selected hidden disabled>
+                        <option selected hidden disabled>
                           Choose...
                         </option>
                         {sectionSubjectName.map((sections, index) => (
@@ -247,7 +247,7 @@ function ListOfTest({ setClicked, clicked }) {
                       className="px-3 py-1 border border-dark rounded col-12"
                       onChange={(e) => setSemester(e.target.value)}
                     >
-                      <option  selected hidden disabled>
+                      <option selected hidden disabled>
                         Choose...
                       </option>
                       <option value="1st Semester">1st Semester</option>
@@ -258,7 +258,7 @@ function ListOfTest({ setClicked, clicked }) {
                       className="px-3 py-1 border border-dark rounded col-12"
                       onChange={(e) => setExam(e.target.value)}
                     >
-                      <option  selected hidden disabled>
+                      <option selected hidden disabled>
                         Choose...
                       </option>
                       <option value="Prelim">Prelim</option>
@@ -368,8 +368,22 @@ function ListOfTest({ setClicked, clicked }) {
             >
               <div className="d-flex justify-content-between">
                 <span>
-                  {test.TestName} {test.Subject} {test.Section_Name}&nbsp;
-                  {test.Uid_Test}
+                  <Link
+                    href={{
+                      pathname: "/Faculty/Test/TestPaper",
+                      query: {
+                        testname: test.TestName,
+                        uid: test.Uid_Test,
+                        sectionname: test.Section_Name,
+                        semester: test.Semester,
+                      },
+                    }}
+                    className="link-dark text-decoration-none
+                    "
+                  >
+                    {test.TestName} {test.Subject} {test.Section_Name}&nbsp;
+                    {test.Uid_Test}
+                  </Link>
                 </span>
                 <div className="btn-group" key={index}>
                   <i className="bi bi-three-dots" data-bs-toggle="dropdown"></i>

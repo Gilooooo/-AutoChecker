@@ -228,13 +228,21 @@ a {
 @media screen and (max-height:655px) and ( max-width: 1350px) {
   .custom-h-landing-4{
     height: 75vh;
-  }  .custom-h-landing-4{
+  }
+}
+@media screen and (max-height:900px) and ( max-width: 575px) {
+  .custom-h-landing-4{
+    height: 60vh;
+  }
+}
+@media screen and (max-height:740px) and ( max-width: 575px) {
+  .custom-h-landing-4{
     height: 75vh;
   }
 }
-@media screen and (max-height:655px) and ( max-width: 575px) {
+@media screen and (max-height:610px) and ( max-width: 575px) {
   .custom-h-landing-4{
-    height: 75vh;
+    height: 80vh;
   }
 }
 
