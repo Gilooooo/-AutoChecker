@@ -6,6 +6,8 @@ import { useState } from "react";
 
 function ListOfTest({ setClicked, clicked }) {
   const { TUPCID } = useTUPCID();
+  const [successful, setSuccess] = useState(false);
+  const [published, setPublished] = useState(false);
   const [TestName, setTestName] = useState("");
   const [Subject, setSubject] = useState("");
   const [uid, setUid] = useState("");
@@ -15,6 +17,8 @@ function ListOfTest({ setClicked, clicked }) {
   const [semester, setSemester] = useState("");
   const [exam, setExam] = useState("");
   const [sectionSubjectName, setSectionSubjectName] = useState([]);
+  const [sorted, setSorted] = useState(false);
+  const [publishedTest, setPublishedTest] = useState([]);
 
   const add = async () => {
     const New = {
@@ -58,24 +62,28 @@ function ListOfTest({ setClicked, clicked }) {
     const sortedList = [...List].sort((a, b) =>
       a.TestName.localeCompare(b.TestName)
     );
+    setSorted(true);
     setList(sortedList);
   };
   const subjectSort = () => {
     const sortedList = [...List].sort((a, b) =>
       a.Subject.localeCompare(b.Subject)
     );
+    setSorted(true);
     setList(sortedList);
   };
   const sectionSort = () => {
     const sortedList = [...List].sort((a, b) =>
       a.Section_Name.localeCompare(b.Section_Name)
     );
+    setSorted(true);
     setList(sortedList);
   };
   const yearSort = () => {
     const sortedList = [...List].sort(
       (a, b) => new Date(a.date_created) - new Date(b.date_created)
     );
+    setSorted(true);
     setList(sortedList);
   };
 
@@ -93,6 +101,35 @@ function ListOfTest({ setClicked, clicked }) {
     }
   };
 
+  const publish = async (data) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:3001/PublishTest?Uid_Prof=${TUPCID}`,
+        data
+      );
+      if (response.status === 200) {
+        setSuccess(true);
+      }
+    } catch (err) {
+      if (err.response && err.response.status === 409) {
+        setPublished(true);
+      }else{
+        console.error(err)
+      }
+    }
+  };
+  const Uidtest = [List.map((Uids) => Uids.Uid_Test)];
+  const checkingPublish = async () => {
+    try {  
+      const response = await axios.post(
+        `http://localhost:3001/CheckPublish`,
+        Uidtest
+      );
+      setPublishedTest(response.data.existingItems);
+    } catch (err) {
+      console.error(err);
+    }
+  };
   const fetchingSectionName = async () => {
     try {
       const response = await axios.get(
@@ -117,10 +154,19 @@ function ListOfTest({ setClicked, clicked }) {
     }
   };
   useEffect(() => {
-    fetchingTestList();
-    fetchingSectionName();
-  }, [TUPCID]);
-
+    const fetching = setInterval(() => {
+      if (sorted) {
+        return;
+      }
+      checkingPublish();
+      fetchingTestList();
+      fetchingSectionName();
+    }, 2000);
+    return () => {
+      clearInterval(fetching);
+    };
+  }, [TUPCID, sorted, Uidtest]);
+  
   const generate = () => {
     const randoms = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     var generated = "";
@@ -149,7 +195,7 @@ function ListOfTest({ setClicked, clicked }) {
               >
                 <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
               </Link>
-              <h2 className="m-0 text-sm-start text-center w-100 pe-3">
+              <h2 className="m-0 text-sm-start text-center w-100 pe-3" onClick={() => console.log(publishedTest)}>
                 FACULTY
               </h2>
             </div>
@@ -168,7 +214,7 @@ function ListOfTest({ setClicked, clicked }) {
             <h4 className="text-decoration-underline">TESTS</h4>
           </div>
           <div className="align-self-end">
-            <small>Sort by:</small>
+            <small onClick={checkingPublish}>Sort by:</small>
           </div>
         </div>
         <div className="d-flex justify-content-between w-100 position-relative">
@@ -382,10 +428,11 @@ function ListOfTest({ setClicked, clicked }) {
                     "
                   >
                     {test.TestName} {test.Subject} {test.Section_Name}&nbsp;
-                    {test.Uid_Test}
+                    {test.Uid_Test} 
                   </Link>
                 </span>
-                <div className="btn-group" key={index}>
+                <div className="btn-group gap-2" key={index}>
+                {publishedTest.includes(test.Uid_Test) ? <span className="text-success">Published</span> : <span className="text-danger">Not Publish</span>}
                   <i className="bi bi-three-dots" data-bs-toggle="dropdown"></i>
                   <ul className="dropdown-menu">
                     <li>
@@ -396,6 +443,22 @@ function ListOfTest({ setClicked, clicked }) {
                         Remove
                       </a>
                     </li>
+                    <li>
+                      <a
+                        className="dropdown-item"
+                        onClick={() =>
+                          publish({
+                            TestName: test.TestName,
+                            UidTest: test.Uid_Test,
+                            Subject: test.Subject,
+                            SectionName: test.Section_Name,
+                            Semester: test.Semester,
+                          })
+                        }
+                      >
+                        Publish
+                      </a>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -403,6 +466,60 @@ function ListOfTest({ setClicked, clicked }) {
           ))}
         </div>
       </section>
+      {/* Modal */}
+      {successful && (
+        <div className="d-block modal" tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border border-dark">
+              <div className="modal-header">
+                <h5 className="modal-title">Success</h5>
+              </div>
+              <div className="modal-body">
+                <p className="text-center">
+                  The test been published
+                </p>
+              </div>
+              <div className="modal-footer align-self-center">
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  data-bs-dismiss="modal"
+                  onClick={() => setSuccess(!successful)}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* end modal */}
+      {/* Modal */}
+      {published && (
+        <div className="d-block modal" tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border border-dark">
+              <div className="modal-header">
+                <h5 className="modal-title">Warning</h5>
+              </div>
+              <div className="modal-body">
+                <p className="text-center">This Test is already published </p>
+              </div>
+              <div className="modal-footer align-self-center">
+                <button
+                  type="button"
+                  className="btn btn-outline-dark"
+                  data-bs-dismiss="modal"
+                  onClick={() => setPublished(!published)}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* end modal */}
     </main>
   );
 }

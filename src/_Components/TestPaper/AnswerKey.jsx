@@ -27,6 +27,10 @@ export default function AnswerKey() {
   const [uidfromtestpaper, setuidfromtestpaper] = useState(null);
   const [processedImageCount, setProcessedImageCount] = useState(0);
   const [comparisonResults, setComparisonResults] = useState(null);
+  const [totalScore, setTotalScore] = useState(0);
+  const [totalScore2, setTotalScore2] = useState(0);
+  const [showPopup, setShowPopup] = useState(false);
+  const [students, setStudents] = useState([]);
 
   const updateStudentId = (newStudentId) => {
     setStudentId(newStudentId);
@@ -64,34 +68,44 @@ export default function AnswerKey() {
         `http://localhost:3001/getquestionstypeandnumberandanswer/${uid}`
       );
       if (response.status === 200) {
-        const {
-          testType: fetchedTestType,
-          questionNumbers,
-          questionTypes,
-          answers,
-        } = response.data;
+        const { questionNumbers, questionTypes, answers, score } =
+          response.data;
 
-        const filteredData = questionTypes.reduce((acc, type, index) => {
+        const organizedData = questionTypes.reduce((acc, type, index) => {
           if (type && answers[index]) {
             const questionNumber = questionNumbers[index];
             const answer = answers[index];
+            const questionScore = score[index]; // Get score for this question
+
             if (!acc[type]) {
-              acc[type] = [];
+              acc[type] = {
+                questions: [],
+                score: 0,
+                TotalScore: 0,
+              };
             }
-            acc[type].push({ questionNumber, answer });
+
+            acc[type].questions.push({
+              questionNumber,
+              answer,
+              score: questionScore,
+            });
+            acc[type].score += questionScore || 0;
           }
           return acc;
         }, {});
 
-        const organizedDataArray = Object.entries(filteredData).map(
+        const organizedDataArray = Object.entries(organizedData).map(
           ([type, data]) => ({
             type,
-            questions: data,
+            questions: data.questions,
+            score: data.score,
           })
         );
 
         setTestData(organizedDataArray);
         setTestType(fetchedTestType || "No Test Paper Created Yet");
+        setTotalScore(calculatedTotalScore);
       } else {
         console.error("Error fetching data");
       }
@@ -103,6 +117,20 @@ export default function AnswerKey() {
   useEffect(() => {
     fetchQuestionData();
   }, []);
+
+  useEffect(() => {
+    // Calculate the total score when testData changes
+    const total = testData.reduce((acc, testSection) => {
+      return (
+        acc +
+        testSection.questions.reduce((sum, question) => {
+          return sum + (parseInt(question.score) || 0); // Summing up scores for each question
+        }, 0)
+      );
+    }, 0);
+
+    setTotalScore(total);
+  }, [testData]);
 
   const fetchStudentAnswers = async () => {
     try {
@@ -125,6 +153,7 @@ export default function AnswerKey() {
             if (type && answers[index]) {
               const questionNumber = questionNumbers[index];
               const answer = answers[index];
+
               if (!acc[type]) {
                 acc[type] = [];
               }
@@ -154,12 +183,39 @@ export default function AnswerKey() {
     }
   };
 
+  // Inside the useEffect that calculates totalScore2
+  useEffect(() => {
+    const calculateTotalScore2 = () => {
+      let totalScore2 = 0;
+
+      studentAnswerData.forEach((answerSection, index) => {
+        answerSection.answers.forEach((answer) => {
+          const matchingTestSection = testData[index];
+          if (matchingTestSection) {
+            const matchingQuestion = matchingTestSection.questions.find(
+              (question) => question.questionNumber === answer.questionNumber
+            );
+
+            if (matchingQuestion && matchingQuestion.answer === answer.answer) {
+              totalScore2 += matchingQuestion.score;
+            }
+          }
+        });
+      });
+
+      setTotalScore2(totalScore2);
+    };
+
+    calculateTotalScore2();
+  }, [studentAnswerData, testData]);
+
   useEffect(() => {
     let timerId;
 
     const fetchDataWithDelay = async () => {
       timerId = setTimeout(async () => {
         await fetchStudentAnswers();
+        setShowPopup(true);
       }, 20000);
     };
 
@@ -172,29 +228,27 @@ export default function AnswerKey() {
     };
   }, [studentid, uidfromtestpaper]);
 
-  useEffect(() => {
-    // Function to fetch comparison results
-    const fetchComparisonResults = async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:3001/compareanswers/${uidfromtestpaper}`
-        );
+  const sendStudentData = () => {
+    console.log("data send");
+    setShowPopup(false);
+  };
 
-        if (response.status === 200) {
-          setComparisonResults(response.data);
-          alert("see result", response.data);
-        } else {
-          console.error("Error fetching comparison results");
-        }
-      } catch (error) {
-        console.error("Error fetching comparison results:", error);
-      }
-    };
-
-    if (uidfromtestpaper !== null && studentAnswerData !== null) {
-      fetchComparisonResults();
+  const fetchStudentname = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3001/Studentname/${studentid}`
+      );
+      setStudents(response.data);
+    } catch (err) {
+      console.error(err);
     }
-  }, [uidfromtestpaper, studentAnswerData]);
+  };
+
+  useEffect(() => {
+    if (studentid) {
+      fetchStudentname();
+    }
+  }, [studentid]);
 
   return (
     <main className="min-vh-100 w-100 p-2">
@@ -203,7 +257,6 @@ export default function AnswerKey() {
           <a className="align-self-center" href="/Faculty/ListOfTest">
             <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
           </a>
-
           <h3 className="m-0">
             {sectionname}: {semester} - {testname} UID: {uid}
           </h3>
@@ -237,7 +290,7 @@ export default function AnswerKey() {
           >
             <li className="m-0 fs-5 text-decoration-none">ANSWER SHEET</li>
           </Link>
-          <li className="m-0 fs-5">ANSWER KEY</li>
+          <li className="m-0 fs-5 text-decoration-underline">ANSWER KEY</li>
           <Link
             href={{
               pathname: "/Faculty/Test/Records",
@@ -257,22 +310,30 @@ export default function AnswerKey() {
           <form className="row">
             <div className="col-6">
               <h5 className="m-0 text-center align-self-center">TEST</h5>
+
               {testData.map((testSection, index) => (
                 <div key={index}>
                   <h6 className="col-12 mt-4">{`TEST ${toRoman(index)}`}</h6>
                   <ul className="col-6 list-unstyled">
                     {testSection.questions.map((question, qIndex) => (
                       <li key={qIndex}>
-                        {`${question.questionNumber}. ${question.answer}`}
+                        {`${question.questionNumber}. ${question.answer} - ${question.score}`}
                       </li>
                     ))}
                   </ul>
                 </div>
               ))}
+              <div className="col-12 mt-4">
+                <p>Total Score: {totalScore} POINTS </p>
+              </div>
             </div>
             <div className="col-6">
               <h5 className="m-0 text-center align-self-center">
                 TUPCID: {studentid}{" "}
+              </h5>
+              <h5 className="m-0 text-center align-self-center">
+                Student Name: {students.FIRSTNAME} {students.MIDDLENAME}{" "}
+                {students.SURNAME}
               </h5>
               <h5 className="m-0 text-center align-self-center">
                 STUDENT ANSWER
@@ -281,14 +342,30 @@ export default function AnswerKey() {
                 <div key={index}>
                   <h6 className="col-12 mt-4">{`TEST ${toRoman(index)}`}</h6>
                   <ul className="col-6 list-unstyled">
-                    {answerSection.answers.map((answer, aIndex) => (
-                      <li key={aIndex}>
-                        {`${answer.questionNumber}. ${answer.answer} `}
-                      </li>
-                    ))}
+                    {answerSection.answers.map((answer, aIndex) => {
+                      // Find the corresponding question in testData for scoring logic
+                      const matchingTestSection = testData[index];
+                      const matchingQuestion =
+                        matchingTestSection?.questions.find(
+                          (question) =>
+                            question.questionNumber === answer.questionNumber
+                        );
+
+                      const scoreOfStudent =
+                        matchingQuestion?.answer === answer.answer
+                          ? matchingQuestion.score
+                          : 0;
+
+                      return (
+                        <li key={aIndex}>
+                          {`${answer.questionNumber}. ${answer.answer} - ${scoreOfStudent}`}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))}
+              <p>Total Score: {totalScore2} POINTS </p>
             </div>
           </form>
           <ImageInput onImageSelected={handleImageSelected} />
@@ -302,6 +379,23 @@ export default function AnswerKey() {
             updateStudentId={updateStudentId}
             onUIDDetected={handleUIDDetected}
           />
+          {showPopup && (
+            <div className="popup">
+              <h2>Student Data</h2>
+              <p>TUPCID: {studentid}</p>
+              <p>
+                Student Name: {students.FIRSTNAME} {students.MIDDLENAME}{" "}
+                {students.SURNAME}
+              </p>
+              <p>Section Name: {sectionname}</p>
+              <p>Section Name: {testname}</p>
+              <p>
+                Total Score: {totalScore2} / {totalScore}
+              </p>
+              <button onClick={sendStudentData}>Send</button>
+              <button onClick={() => setShowPopup(false)}>Cancel</button>
+            </div>
+          )}
         </section>
       </section>
     </main>

@@ -94,9 +94,9 @@ function FacultyReportProblem({ clicked, setClicked }) {
         </form>
         {/* Modal */}
         {success && (
-          <div className="d-block modal bg-secondary" tabIndex="-1">
+          <div className="d-block modal" tabIndex="-1">
             <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content">
+              <div className="modal-content border border-dark">
                 <div className="modal-header">
                   <h5 className="modal-title">Success</h5>
                 </div>

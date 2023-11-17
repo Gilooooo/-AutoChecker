@@ -3,52 +3,59 @@ import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-function StudentTestList({clicked, setClicked}) {
-  const {TUPCID} = useTUPCID();
+function StudentTestList({ clicked, setClicked }) {
+  const { TUPCID } = useTUPCID();
   const [testList, setTestList] = useState([]);
   const [uidSection, setUidSection] = useState("");
   const [message, setMessage] = useState("");
   const [sectionName, setSectionName] = useState("");
   const [subject, setSubject] = useState("");
   const [testName, setTestName] = useState("");
-  const [uidTest, setUidTest] = useState("")
+  const [uidTest, setUidTest] = useState("");
 
-  const Join = async() =>{
+  const Join = async () => {
     try {
-        const response = await axios.get(`http://localhost:3001/StudentTestList?uidsection=${uidSection}`);
-        if(response.status === 200){
-          console.log(response.data);
-          try {
-            const response1 = await axios.put(`http://localhost:3001/StudentTestList?uidStudent=${TUPCID}`, response.data[0]);
-            if(response1.status === 200){
-              console.log("Done")
-            }
-          } catch (err) {
-            console.error(err)
+      const response = await axios.get(
+        `http://localhost:3001/StudentTestList?uidsection=${uidSection}`
+      );
+      if (response.status === 200) {
+        console.log(response.data);
+        try {
+          const response1 = await axios.put(
+            `http://localhost:3001/StudentTestList?uidStudent=${TUPCID}`,
+            response.data[0]
+          );
+          if (response1.status === 200) {
+            console.log("Done");
           }
-        }else{
-          setMessage("Section doesn't exist or wrong uid")
+        } catch (err) {
+          console.error(err);
         }
+      } else {
+        setMessage("Section doesn't exist or wrong uid");
+      }
     } catch (err) {
-      console.error(err)
-    } 
-  }
+      console.error(err);
+    }
+  };
 
   const fetchingStudentTest = async () => {
-     try {
-      const response = await axios.get(`http://localhost:3001/StudentSectionList?uidStudent=${TUPCID}`);
-      setTestList(response.data)
-     } catch (err) {
-      console.error(err)
-     }
+    try {
+      const response = await axios.get(
+        `http://localhost:3001/StudentSectionList?uidStudent=${TUPCID}`
+      );
+      setTestList(response.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
   useEffect(() => {
     const fetching = setInterval(() => {
       fetchingStudentTest();
     }, 2000);
-    return() =>{
-      clearInterval(fetching)
-    } 
+    return () => {
+      clearInterval(fetching);
+    };
   }, [TUPCID]);
   const handleclick = () => {
     setClicked(!clicked);
@@ -58,7 +65,10 @@ function StudentTestList({clicked, setClicked}) {
     <main className="w-100 min-vh-100 d-flex justify-content-center">
       <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-start p-2">
         <div className="d-flex gap-2 align-items-center mb-3 w-100">
-        <i className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded" onClick={handleclick}></i>
+          <i
+            className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
+            onClick={handleclick}
+          ></i>
           <h2 className="m-0 w-100 text-center text-sm-start pe-3">STUDENT</h2>
         </div>
         <div className="d-flex justify-content-end w-100 ">
@@ -143,12 +153,17 @@ function StudentTestList({clicked, setClicked}) {
               className="px-3 py-2 border border-dark rounded col-12 r"
               key={index}
             >
-              <div className="d-flex justify-content-center">
-                <Link href={{pathname:"/Student/Result", query:`Uid=${test.Section_Uid}&Subject=${test.Section_Subject}`}} className="link-dark text-decoration-none"><span>
-                  {test.TestName} {test.Section_Uid} {test.Section_Subject}
-                </span>
-                </Link>
-                
+              <div className="d-flex flex-column justify-content-center">
+                <div className="text-center">
+                  <span>
+                    {test.TestName} {test.Section_Uid} {test.Section_Subject}
+                  </span>
+                </div>
+                <div className="container-fluid row align-self-center border border-dark rounded py-3">
+                  <span className="px-0 py-2 border-bottom border-secondary">Hello</span>
+                  <span className="px-0 py-2 border-bottom border-secondary">Hello</span>
+                  <span className="px-0 py-2 border-bottom border-secondary">Hello</span>
+                </div>
               </div>
             </div>
           ))}

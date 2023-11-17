@@ -3,7 +3,7 @@ import Link from "next/link";
 function StudentResult({ clicked, setClicked }) {
   const handleclick = () => {
     setClicked(!clicked);
-  };
+  };                
 
   return (
     <main className="w-100 min-vh-100">

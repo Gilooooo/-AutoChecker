@@ -17,7 +17,9 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
   const [continueProcessing, setContinueProcessing] = useState(true);
   const [allImagesProcessed, setAllImagesProcessed] = useState(false);
   const hasSentDataRef = useRef(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
+  
   const recognizeText = async () => {
     if (!continueProcessing) {
       return; 
@@ -122,6 +124,7 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
               UID,
               questionType: [...questionTypes],
               answers: [...filteredResultsArray],
+              score: ""
             },
           ]);
 
@@ -227,8 +230,8 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
         <div className="popup">
           <h2>Confirm Action</h2>
           <p>Do you want to send the data to the database?</p>
-          <button disabled={isSendingData} onClick={sendTextToServer}>Send</button>
-          <button disabled={isSendingData} onClick={cancelAction}>Cancel</button>
+          <button onClick={sendTextToServer}>Send</button>
+          <button  onClick={cancelAction}>Cancel</button>
         </div>
       )}
 

@@ -65,7 +65,7 @@ function Preset({ setClicked, clicked }) {
             </h2>
           </div>
         </div>
-        <div className="d-flex justify-content-between w-100 px-2">
+        <div className="d-flex justify-content-between w-100 px-sm-2 mt-2">
           <h3>PRESETS</h3>
           <div className="d-flex flex-column align-self-end">
             <small className="text-end">Sort by:</small>
@@ -76,7 +76,7 @@ function Preset({ setClicked, clicked }) {
           </div>
         </div>
         {/* Tests */}
-        <div className="row m-0 mt-4 col-12 gap-1">
+        <div className="row m-0 mt-2 col-12 gap-1 px-sm-2">
           {presetList.map((test, index) => (
             <div
               className="px-3 py-2 border border-dark rounded col-12"

@@ -639,7 +639,7 @@ export default function TestPaper() {
 
       const totalScore = updatedSavedValues.reduce((total, data) => total + data.score, 0);
   const scoreDifference = maxScore - totalScore;
-  const typeScores2 = { 'Total Score': totalScore };
+  const typeScores2 = { 'TotalScore': totalScore };
   updatedSavedValues.push(typeScores2);
 
  

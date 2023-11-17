@@ -78,20 +78,12 @@ function Sections({ setClicked, clicked }) {
   useEffect(() => {
     const changings = setInterval(() => {
       setCopyClick(false);
+      fetchingSections();
     }, 2000);
     return () => {
       clearInterval(changings);
     };
-  }, [copyClick]);
-
-  useEffect(() => {
-    const fetching = setInterval(() => {
-      fetchingSections();
-    }, 2000);
-    return () => {
-      clearInterval(fetching);
-    };
-  }, [TUPCID]);
+  }, [TUPCID,copyClick]);
 
   const generate = () => {
     const randoms = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";

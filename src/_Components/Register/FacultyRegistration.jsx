@@ -41,7 +41,7 @@ function FacultyRegistration() {
         setShowsuccessfull(true);
       } else {
         //prompt modal
-        alert("aww");
+        alert("Try Again");
       }
     } catch (err) {
       if (err.response && err.response.status === 409) {

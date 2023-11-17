@@ -7,15 +7,15 @@ function Manual() {
         <div className="d-md-flex row justify-content-center h-100 align-items-center">
           <div className="col-md-6 px-sm-4 px-md-5 px-4 d-flex flex-column gap-3">
             <h1>HOW TO START?</h1>
-            <p className="d-flex align-items-center gap-2 fs-3 m-0"><i className="bi bi-1-circle display-4"></i>Click <span><Link href={"/Login/Registration"} className="text-decoration-none">Register Now</Link></span></p>
-            <p className="d-flex align-items-center gap-2 fs-3 m-0"><i className="bi bi-2-circle display-4"></i>Choose a school position and fill up the important details</p>
+            <p className="d-flex align-items-center gap-2 fs-3 m-0"><i className="bi bi-1-circle display-4 pt-1"></i>Click <span><Link href={"/Login/Registration"} className="text-decoration-none">Register Now</Link></span></p>
+            <p className="d-flex align-items-center gap-2 fs-3 m-0"><i className="bi bi-2-circle display-4 pt-1"></i>Choose a school position and fill up the important details</p>
             <p className="d-flex align-items-center gap-2 fs-3 m-0">
-            <i className="bi bi-3-circle display-4"></i>After a successful registration, you can now login to your account
+            <i className="bi bi-3-circle display-4 pt-1"></i>After a successful registration, you can now login to your account
             </p>
           </div>
           <div className="col-md-6 h-sm-100 h-50 d-flex justify-content-center align-items-center">
-            <video className="img-fluid h-100 px-sm-2 px-2" controls>
-              <source src="" type="video" />
+            <video className="img-fluid h-100 px-sm-2 px-2" preload="auto" muted loop="loop" autoPlay="autoPlay">
+              <source src="https://www.yole.com/assets/videos/SIGNATURE-FROYO-Banner.mp4"/>
             </video>
           </div>
         </div>
