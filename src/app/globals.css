@@ -239,11 +239,15 @@ a {
   .custom-h-landing-4{
     height: 75vh;
   }
+  .custom-h-landing-2{
+    height: 80vh;
+  }
 }
 @media screen and (max-height:610px) and ( max-width: 575px) {
   .custom-h-landing-4{
     height: 80vh;
   }
+ 
 }
 
 @media screen and (max-height: 655px) {
@@ -258,14 +262,14 @@ a {
   .custom-eye {
     right: 35px;
   }
-  .custom-h-landing-2 {
-    height: 80vh;
-  }
   .custom-display {
     font-size: 50px;
   }
   .custom-h-landing {
     height: 50vh;
+  }
+  .custom-h-landing-2{
+    height: 60vh;
   }
   .custom-h-landing-3 {
     height: 55vh;
