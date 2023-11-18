@@ -8,10 +8,7 @@ function StudentTestList({ clicked, setClicked }) {
   const [testList, setTestList] = useState([]);
   const [uidSection, setUidSection] = useState("");
   const [message, setMessage] = useState("");
-  const [sectionName, setSectionName] = useState("");
-  const [subject, setSubject] = useState("");
-  const [testName, setTestName] = useState("");
-  const [uidTest, setUidTest] = useState("");
+  const [publishedtest, setPublishedTest] = useState([]);
 
   const Join = async () => {
     try {
@@ -34,6 +31,20 @@ function StudentTestList({ clicked, setClicked }) {
       } else {
         setMessage("Section doesn't exist or wrong uid");
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const uidSections = testList.map((Uids) => Uids.Section_Uid);
+
+  const fetchingPublishTest = async () => {
+    try {
+      const response = await axios.post(
+        `http://localhost:3001/FetchingPublishTest`,
+        uidSections
+      );
+      setPublishedTest(response.data);
     } catch (err) {
       console.error(err);
     }
@@ -69,10 +80,15 @@ function StudentTestList({ clicked, setClicked }) {
             className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
             onClick={handleclick}
           ></i>
-          <h2 className="m-0 w-100 text-center text-sm-start pe-3">STUDENT</h2>
+          <h2
+            className="m-0 w-100 text-center text-sm-start pe-3"
+            onClick={fetchingPublishTest}
+          >
+            STUDENT
+          </h2>
         </div>
         <div className="d-flex justify-content-end w-100 ">
-          <small onClick={() => console.log(testList)}>Sort by:</small>
+          <small onClick={() => console.log(publishedtest)}>Sort by:</small>
         </div>
         <div className="d-flex justify-content-between w-100 position-relative">
           <div className="d-flex gap-2">
@@ -147,23 +163,28 @@ function StudentTestList({ clicked, setClicked }) {
             <button className="btn btn-outline-dark btn-sm">STATUS</button>
           </div>
         </div>
-        <div className="row m-0 mt-4 col-12 gap-1">
+        <div className="row m-0 mt-4 col-12 gap-2">
           {testList.map((test, index) => (
             <div
-              className="px-3 py-2 border border-dark rounded col-12 r"
+              className="p-1 px-3 border border-dark rounded col-12 "
               key={index}
             >
               <div className="d-flex flex-column justify-content-center">
-                <div className="text-center">
-                  <span>
-                    {test.TestName} {test.Section_Uid} {test.Section_Subject}
-                  </span>
-                </div>
-                <div className="container-fluid row align-self-center border border-dark rounded py-3">
-                  <span className="px-0 py-2 border-bottom border-secondary">Hello</span>
-                  <span className="px-0 py-2 border-bottom border-secondary">Hello</span>
-                  <span className="px-0 py-2 border-bottom border-secondary">Hello</span>
-                </div>
+                <span className="text-center py-2">
+                  {test.TestName} {test.Section_Uid} {test.Section_Subject}
+                </span>
+                {publishedtest.map((tests) => (
+                  tests.map((test, indexs) => (
+                    <div
+                      className="container-fluid d-flex flex-column gap-2 border border-dark rounded py-3"
+                      key={indexs}
+                    >
+                      <span className="px-0 py-2 border border-secondary text-center">
+                        {test.Subject} {test.TestName}
+                      </span>
+                    </div>
+                  ))
+                ))}
               </div>
             </div>
           ))}

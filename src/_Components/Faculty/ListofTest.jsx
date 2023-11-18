@@ -19,6 +19,7 @@ function ListOfTest({ setClicked, clicked }) {
   const [sectionSubjectName, setSectionSubjectName] = useState([]);
   const [sorted, setSorted] = useState(false);
   const [publishedTest, setPublishedTest] = useState([]);
+  const [sectionUid, setSectionUid] = useState("");
 
   const add = async () => {
     const New = {
@@ -28,6 +29,7 @@ function ListOfTest({ setClicked, clicked }) {
       SectionName: section,
       UidProf: TUPCID,
       Semester: semester + ":" + exam,
+      Uid_section: sectionUid
     };
     if (
       TestName != "" &&
@@ -179,6 +181,11 @@ function ListOfTest({ setClicked, clicked }) {
   const handleclick = () => {
     setClicked(!clicked);
   };
+
+  const sectionName = (selectedSection) => {
+    setSection(selectedSection.split(",")[0]);
+    setSectionUid(selectedSection.split(",")[1]);
+  };
   return (
     <main className="w-100 min-vh-100">
       <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-start p-2">
@@ -214,7 +221,7 @@ function ListOfTest({ setClicked, clicked }) {
             <h4 className="text-decoration-underline">TESTS</h4>
           </div>
           <div className="align-self-end">
-            <small onClick={checkingPublish}>Sort by:</small>
+            <small onClick={() => console.log(List)}>Sort by:</small>
           </div>
         </div>
         <div className="d-flex justify-content-between w-100 position-relative">
@@ -276,14 +283,14 @@ function ListOfTest({ setClicked, clicked }) {
                         name="SectionName"
                         id="SectionName"
                         className="py-1 px-3 rounded border border-dark"
-                        onChange={(e) => setSection(e.target.value)}
+                        onChange={(e) => sectionName(e.target.value)}
                       >
                         <option selected hidden disabled>
                           Choose...
                         </option>
                         {sectionSubjectName.map((sections, index) => (
-                          <option value={sections.Section_Name} key={index}>
-                            {sections.Section_Name}
+                          <option value={[sections.Section_Name, sections.Uid_Section]} key={index}>
+                            {sections.Section_Name} {sections.Uid_Section}
                           </option>
                         ))}
                       </select>
@@ -453,6 +460,7 @@ function ListOfTest({ setClicked, clicked }) {
                             Subject: test.Subject,
                             SectionName: test.Section_Name,
                             Semester: test.Semester,
+                            SectionUid: test.Uid_Section
                           })
                         }
                       >

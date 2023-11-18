@@ -270,7 +270,7 @@ function Sections({ setClicked, clicked }) {
                     query: `Section=${section.Section_Name}&Uid_Section=${section.Uid_Section}`,
                   }}
                 >
-                  <span>{section.Section_Name}</span>
+                  <span>{section.Section_Name} {section.Subject}</span>
                 </Link>
               </div>
               <div className="d-flex border border-dark rounded col-lg-2 col-md-3 col-sm-4 col-5 justify-content-between align-items-center">
