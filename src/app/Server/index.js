@@ -495,22 +495,23 @@ app.get("/TestListSectionName", async (req, res) => {
   const { UidProf } = req.query;
   try {
     const query =
-      "SELECT Subject, Section_Name FROM faculty_sections WHERE Uid_Professor = ?";
+      "SELECT Subject, Section_Name, Uid_Section FROM faculty_sections WHERE Uid_Professor = ?";
     const [section_names] = await connection.query(query, [UidProf]);
     return res.status(200).json(section_names);
   } catch (err) {
     return res.status(500).send({ message: "Internal server error" });
   }
 });
+
 app.post("/TestList", async (req, res) => {
-  const { TestName, Subject, UidTest, UidProf, SectionName, Semester } =
+  const { TestName, Subject, UidTest, UidProf, SectionName, Semester, Uid_section } =
     req.body;
   try {
     const infos = await getInfoProf(UidProf);
     const query1 =
-      "INSERT INTO faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Test, Uid_Professor, date_created) values (?, ? ,? ,?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+      "INSERT INTO faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Section, Uid_Test, Uid_Professor, date_created) values (?, ?, ? ,? ,?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     const query2 =
-      "INSERT INTO preset_faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+      "INSERT INTO preset_faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Section, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     await connection.query(query1, [
       infos[0].FIRSTNAME,
       infos[0].MIDDLENAME,
@@ -521,6 +522,7 @@ app.post("/TestList", async (req, res) => {
       Subject,
       SectionName,
       Semester,
+      Uid_section,
       UidTest,
       UidProf,
     ]);
@@ -534,6 +536,7 @@ app.post("/TestList", async (req, res) => {
       Subject,
       SectionName,
       Semester,
+      Uid_section,
       UidTest,
       UidProf,
     ]);
@@ -555,14 +558,14 @@ app.get("/TestList", async (req, res) => {
 });
 
 app.post("/CheckPublish", async (req, res) => {
-  const [Try] = req.body;
+  const [Uids] = req.body;
   try {
     const existingItems = [];
-    for (let i = 0; i < Try.length; i++) {
+    for (let i = 0; i < Uids.length; i++) {
       const query = "SELECT COUNT(*) as count FROM publish_test WHERE Uid_Test = ?"
-      const [row] = await connection.query(query, [Try[i]]);
+      const [row] = await connection.query(query, [Uids[i]]);
       if(row[0].count === 1){
-        existingItems.push(Try[i])
+        existingItems.push(Uids[i])
       }
     }
     return res.status(200).json({ existingItems });
@@ -586,14 +589,14 @@ app.delete("/TestList", async (req, res) => {
 
 app.post("/PublishTest", async (req, res) => {
   const { Uid_Prof } = req.query;
-  const { TestName, UidTest, Subject, SectionName, Semester } = req.body;
+  const { TestName, UidTest, Subject, SectionName, Semester, SectionUid} = req.body;
   const TupcId = await getInfoProf(Uid_Prof);
   try {
     const checking = await checkPublish(UidTest);
     if (checking) {
       const query =
-        "INSERT INTO publish_test (Professor_ID, Uid_Professor, Uid_Test, Subject, Section_Name, Semester, TestName) values (?, ?, ?, ?, ?, ? ,?)";
-      await connection.query(query, [TupcId[0].TUPCID, Uid_Prof, UidTest, Subject, SectionName, Semester, TestName])
+        "INSERT INTO publish_test (Professor_ID, Uid_Professor, Section_Uid, Uid_Test, Subject, Section_Name, Semester, TestName) values (?, ?, ?, ?, ?, ?, ? ,?)";
+      await connection.query(query, [TupcId[0].TUPCID, Uid_Prof, SectionUid, UidTest, Subject, SectionName, Semester, TestName])
       return res.status(200).send({ message: "Done" });
     }else{
       return res.status(409).send({ message: "Already publish"})
@@ -736,6 +739,23 @@ app.get("/StudentSectionList", async (req, res) => {
   }
 });
 
+app.post("/FetchingPublishTest", async (req, res) => {
+  const uids = req.body;
+  const datas = [];
+  try {
+    for(let i = 0; i < uids.length; i++){
+      const query = "SELECT * FROM publish_test WHERE Section_Uid = ?";
+      const [row] = await connection.query(query, [uids[i]]);
+      if(row.length > 0){
+        datas.push(row);
+      }
+    }
+    console.log(datas);
+    return res.status(200).send(datas);
+  } catch (err) {
+    throw err
+  }
+})
 //Settings
 //DEMO
 app.get("/facultyinfos/:TUPCID", async (req, res) => {
