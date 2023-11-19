@@ -8,7 +8,9 @@ function StudentTestList({ clicked, setClicked }) {
   const [testList, setTestList] = useState([]);
   const [uidSection, setUidSection] = useState("");
   const [message, setMessage] = useState("");
-  const [publishedtest, setPublishedTest] = useState([]);
+  const [testNameMap, setTestNameMap] = useState({});
+  const [studentScores, setStudentScores] = useState([]);
+  const [dropdown, setDropdown] = useState(false);
 
   const Join = async () => {
     try {
@@ -36,30 +38,20 @@ function StudentTestList({ clicked, setClicked }) {
     }
   };
 
-  const uidSections = testList.map((Uids) => Uids.Section_Uid);
-
-  const fetchingPublishTest = async () => {
-    try {
-      const response = await axios.post(
-        `http://localhost:3001/FetchingPublishTest`,
-        uidSections
-      );
-      setPublishedTest(response.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const fetchingStudentTest = async () => {
     try {
       const response = await axios.get(
         `http://localhost:3001/StudentSectionList?uidStudent=${TUPCID}`
       );
-      setTestList(response.data);
+      console.log(response.data)
+      setTestList(response.data.enrolledSections || []);
+      setTestNameMap(response.data.testNameMap || {});
+      setStudentScores(response.data.studentScores || []);
     } catch (err) {
       console.error(err);
     }
   };
+
   useEffect(() => {
     const fetching = setInterval(() => {
       fetchingStudentTest();
@@ -68,6 +60,7 @@ function StudentTestList({ clicked, setClicked }) {
       clearInterval(fetching);
     };
   }, [TUPCID]);
+
   const handleclick = () => {
     setClicked(!clicked);
   };
@@ -80,15 +73,10 @@ function StudentTestList({ clicked, setClicked }) {
             className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
             onClick={handleclick}
           ></i>
-          <h2
-            className="m-0 w-100 text-center text-sm-start pe-3"
-            onClick={fetchingPublishTest}
-          >
-            STUDENT
-          </h2>
+          <h2 className="m-0 w-100 text-center text-sm-start pe-3">STUDENT</h2>
         </div>
         <div className="d-flex justify-content-end w-100 ">
-          <small onClick={() => console.log(publishedtest)}>Sort by:</small>
+          <small onClick={() => console.log(testList)}>Sort by:</small>
         </div>
         <div className="d-flex justify-content-between w-100 position-relative">
           <div className="d-flex gap-2">
@@ -163,29 +151,36 @@ function StudentTestList({ clicked, setClicked }) {
             <button className="btn btn-outline-dark btn-sm">STATUS</button>
           </div>
         </div>
-        <div className="row m-0 mt-4 col-12 gap-2">
-          {testList.map((test, index) => (
+        <div className="row m-0 mt-2 col-12 gap-2">
+          {testList.map((section, index) => (
             <div
-              className="p-1 px-3 border border-dark rounded col-12 "
+              className="p-2 px-3 border border-1 border-dark rounded col-12"
               key={index}
             >
-              <div className="d-flex flex-column justify-content-center">
-                <span className="text-center py-2">
-                  {test.TestName} {test.Section_Uid} {test.Section_Subject}
-                </span>
-                {publishedtest.map((tests) => (
-                  tests.map((test, indexs) => (
-                    <div
-                      className="container-fluid d-flex flex-column gap-2 border border-dark rounded py-3"
-                      key={indexs}
-                    >
-                      <span className="px-0 py-2 border border-secondary text-center">
-                        {test.Subject} {test.TestName}
-                      </span>
+              <h5
+                className="fw-light m-0 py-2"
+                onClick={() => setDropdown(dropdown === index ? null : index)}
+              >
+                {section.Section_Subject} | {section.Section_Uid}
+              </h5>
+              {
+                <div
+                  className={`${
+                    dropdown === index ? "d-block" : "d-none"
+                  } border-top border-bottom py-2 px-3`}
+                >
+                  {Object.values(testNameMap)[index] == null ? (
+                    "No Test Yet"
+                  ) : (
+                    <div>
+                      {Object.values(testNameMap)[index]} |
+                      {studentScores && studentScores.length > index
+                        ? `   GRADED  |    ${studentScores[index].TOTALSCORE} / ${studentScores[index].MAXSCORE}`
+                        : "    PENDING |   Score is not yet available"}
                     </div>
-                  ))
-                ))}
-              </div>
+                  )}
+                </div>
+              }
             </div>
           ))}
         </div>

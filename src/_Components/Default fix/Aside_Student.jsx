@@ -79,15 +79,21 @@ function Aside_Student({ clicked, setClicked }) {
       </aside>
       <aside
         ref={asideRef}
-        className={
-          clicked
-            ? "vh-100 position-fixed custom-aside-admin2 custom-red px-2"
-            : "vh-100 position-fixed custom-aside-admin1 custom-red"
-        }
+        className={`
+        ${
+          clicked ? "custom-aside-admin2 px-2" : "custom-aside-admin1"
+        } vh-100 position-fixed  custom-red
+          `}
       >
         <div className="h-100 d-flex flex-column justify-content-between align-items-center py-1">
           <div className="d-flex align-items-center">
-            <img src="/TUPC.svg" alt="TUPC" height={70} width={70} className="custom-shadow-2"/>
+            <img
+              src="/TUPC.svg"
+              alt="TUPC"
+              height={70}
+              width={70}
+              className="custom-shadow-2"
+            />
             <div className="d-flex flex-column custom-black-color ps-2">
               <small className="text-wrap">{information.FullName}</small>
               <small>{information.Tupcid}</small>

@@ -32,6 +32,7 @@ export default function AnswerKey() {
   const [showPopup, setShowPopup] = useState(false);
   const [students, setStudents] = useState([]);
 
+
   const updateStudentId = (newStudentId) => {
     setStudentId(newStudentId);
   };
@@ -68,8 +69,12 @@ export default function AnswerKey() {
         `http://localhost:3001/getquestionstypeandnumberandanswer/${uid}`
       );
       if (response.status === 200) {
-        const { questionNumbers, questionTypes, answers, score } =
-          response.data;
+        const {
+          questionNumbers,
+          questionTypes,
+          answers,
+          score,
+        } = response.data;
 
         const organizedData = questionTypes.reduce((acc, type, index) => {
           if (type && answers[index]) {
@@ -85,23 +90,17 @@ export default function AnswerKey() {
               };
             }
 
-            acc[type].questions.push({
-              questionNumber,
-              answer,
-              score: questionScore,
-            });
+            acc[type].questions.push({ questionNumber, answer, score: questionScore });
             acc[type].score += questionScore || 0;
           }
           return acc;
         }, {});
 
-        const organizedDataArray = Object.entries(organizedData).map(
-          ([type, data]) => ({
-            type,
-            questions: data.questions,
-            score: data.score,
-          })
-        );
+        const organizedDataArray = Object.entries(organizedData).map(([type, data]) => ({
+          type,
+          questions: data.questions,
+          score: data.score,
+        }));
 
         setTestData(organizedDataArray);
         setTestType(fetchedTestType || "No Test Paper Created Yet");
@@ -121,15 +120,13 @@ export default function AnswerKey() {
   useEffect(() => {
     // Calculate the total score when testData changes
     const total = testData.reduce((acc, testSection) => {
-      return (
-        acc +
-        testSection.questions.reduce((sum, question) => {
-          return sum + (parseInt(question.score) || 0); // Summing up scores for each question
-        }, 0)
-      );
+      return acc + testSection.questions.reduce((sum, question) => {
+        return sum + (parseInt(question.score) || 0); // Summing up scores for each question
+      }, 0);
     }, 0);
 
-    setTotalScore(total);
+
+    setTotalScore(total); 
   }, [testData]);
 
   const fetchStudentAnswers = async () => {
@@ -153,11 +150,12 @@ export default function AnswerKey() {
             if (type && answers[index]) {
               const questionNumber = questionNumbers[index];
               const answer = answers[index];
-
+            
+              
               if (!acc[type]) {
                 acc[type] = [];
               }
-              acc[type].push({ questionNumber, answer });
+              acc[type].push({ questionNumber, answer});
             }
             return acc;
           }, {});
@@ -183,32 +181,34 @@ export default function AnswerKey() {
     }
   };
 
+
   // Inside the useEffect that calculates totalScore2
-  useEffect(() => {
-    const calculateTotalScore2 = () => {
-      let totalScore2 = 0;
+useEffect(() => {
+  const calculateTotalScore2 = () => {
+    let totalScore2 = 0;
 
-      studentAnswerData.forEach((answerSection, index) => {
-        answerSection.answers.forEach((answer) => {
-          const matchingTestSection = testData[index];
-          if (matchingTestSection) {
-            const matchingQuestion = matchingTestSection.questions.find(
-              (question) => question.questionNumber === answer.questionNumber
-            );
+    studentAnswerData.forEach((answerSection, index) => {
+      answerSection.answers.forEach((answer) => {
+        const matchingTestSection = testData[index];
+        if (matchingTestSection) {
+          const matchingQuestion = matchingTestSection.questions.find(
+            (question) => question.questionNumber === answer.questionNumber
+          );
 
-            if (matchingQuestion && matchingQuestion.answer === answer.answer) {
-              totalScore2 += matchingQuestion.score;
-            }
+          if (matchingQuestion && matchingQuestion.answer === answer.answer) {
+            totalScore2 += matchingQuestion.score;
           }
-        });
+        }
       });
+    });
 
-      setTotalScore2(totalScore2);
-    };
+    setTotalScore2(totalScore2);
+  };
 
-    calculateTotalScore2();
-  }, [studentAnswerData, testData]);
+  calculateTotalScore2();
+}, [studentAnswerData, testData]);
 
+  
   useEffect(() => {
     let timerId;
 
@@ -228,10 +228,37 @@ export default function AnswerKey() {
     };
   }, [studentid, uidfromtestpaper]);
 
-  const sendStudentData = () => {
-    console.log("data send");
-    setShowPopup(false);
+
+  const sendStudentData = async () => {
+    try {
+      // Fetch student answers from the backend endpoint
+      const response = await axios.put(
+        `http://localhost:3001/updatestudentanswers/${studentid}/${uidfromtestpaper}`
+      );
+  
+      const { data: { updatedAnswers } } = response;
+      console.log("updated answers:", updatedAnswers)
+  
+      // Use the updated answers to post to another endpoint if needed
+      const sendData = {
+        TUPCID: studentid,
+        UID: uidfromtestpaper,
+        results: updatedAnswers,
+        totalscore2: totalScore2,
+        maxscore: totalScore
+      };
+  
+      const resultResponse = await axios.post('http://localhost:3001/sendanswertoresult', sendData);
+  
+      console.log('Data sent to /sendanswertoresult endpoint:', resultResponse.data);
+      //setShowPopup(false);
+    } catch (error) {
+      console.error('Error sending data:', error);
+    }
   };
+  
+  
+  
 
   const fetchStudentname = async () => {
     try {
@@ -257,6 +284,7 @@ export default function AnswerKey() {
           <a className="align-self-center" href="/Faculty/ListOfTest">
             <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
           </a>
+
           <h3 className="m-0">
             {sectionname}: {semester} - {testname} UID: {uid}
           </h3>
@@ -290,7 +318,7 @@ export default function AnswerKey() {
           >
             <li className="m-0 fs-5 text-decoration-none">ANSWER SHEET</li>
           </Link>
-          <li className="m-0 fs-5 text-decoration-underline">ANSWER KEY</li>
+          <li className="m-0 fs-5">ANSWER KEY</li>
           <Link
             href={{
               pathname: "/Faculty/Test/Records",
@@ -310,6 +338,9 @@ export default function AnswerKey() {
           <form className="row">
             <div className="col-6">
               <h5 className="m-0 text-center align-self-center">TEST</h5>
+              <div className="col-12 mt-4">
+                <p>Total Score: {totalScore} POINTS </p>
+              </div>
 
               {testData.map((testSection, index) => (
                 <div key={index}>
@@ -323,21 +354,19 @@ export default function AnswerKey() {
                   </ul>
                 </div>
               ))}
-              <div className="col-12 mt-4">
-                <p>Total Score: {totalScore} POINTS </p>
-              </div>
+              
             </div>
             <div className="col-6">
               <h5 className="m-0 text-center align-self-center">
                 TUPCID: {studentid}{" "}
               </h5>
               <h5 className="m-0 text-center align-self-center">
-                Student Name: {students.FIRSTNAME} {students.MIDDLENAME}{" "}
-                {students.SURNAME}
-              </h5>
+              Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}
+            </h5>
               <h5 className="m-0 text-center align-self-center">
                 STUDENT ANSWER
               </h5>
+              <p>Total Score: {totalScore2} POINTS </p>
               {studentAnswerData.map((answerSection, index) => (
                 <div key={index}>
                   <h6 className="col-12 mt-4">{`TEST ${toRoman(index)}`}</h6>
@@ -345,28 +374,27 @@ export default function AnswerKey() {
                     {answerSection.answers.map((answer, aIndex) => {
                       // Find the corresponding question in testData for scoring logic
                       const matchingTestSection = testData[index];
-                      const matchingQuestion =
-                        matchingTestSection?.questions.find(
-                          (question) =>
-                            question.questionNumber === answer.questionNumber
-                        );
+                      const matchingQuestion = matchingTestSection?.questions.find(
+                        (question) => question.questionNumber === answer.questionNumber
+                      );
 
-                      const scoreOfStudent =
-                        matchingQuestion?.answer === answer.answer
-                          ? matchingQuestion.score
-                          : 0;
+                    
+                      const scoreOfStudent = matchingQuestion?.answer === answer.answer ? matchingQuestion.score : 0;
 
                       return (
                         <li key={aIndex}>
                           {`${answer.questionNumber}. ${answer.answer} - ${scoreOfStudent}`}
                         </li>
                       );
+                      
                     })}
+                    
                   </ul>
                 </div>
               ))}
-              <p>Total Score: {totalScore2} POINTS </p>
+            
             </div>
+          
           </form>
           <ImageInput onImageSelected={handleImageSelected} />
           <TextLocalization imageData={processedImageData} />
@@ -380,24 +408,20 @@ export default function AnswerKey() {
             onUIDDetected={handleUIDDetected}
           />
           {showPopup && (
-            <div className="popup">
-              <h2>Student Data</h2>
-              <p>TUPCID: {studentid}</p>
-              <p>
-                Student Name: {students.FIRSTNAME} {students.MIDDLENAME}{" "}
-                {students.SURNAME}
-              </p>
-              <p>Section Name: {sectionname}</p>
-              <p>Section Name: {testname}</p>
-              <p>
-                Total Score: {totalScore2} / {totalScore}
-              </p>
-              <button onClick={sendStudentData}>Send</button>
-              <button onClick={() => setShowPopup(false)}>Cancel</button>
-            </div>
-          )}
+      <div className="popup">
+        <h2>Student Data</h2>
+        <p>TUPCID: {studentid}</p>
+        <p>Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}</p>
+        <p>Section Name: {sectionname}</p>
+        <p>Section Name: {testname}</p>
+        <p>Total Score: {totalScore2} / {totalScore}</p>
+        <button onClick={sendStudentData}>Send</button>
+        <button onClick={() => setShowPopup(false)}>Cancel</button>
+      </div>
+    )}
         </section>
-      </section>
+        </section>
+    
     </main>
   );
 }

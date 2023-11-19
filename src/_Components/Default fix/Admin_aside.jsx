@@ -81,11 +81,11 @@ function AdminAside({clicked, setClicked}) {
       </aside>
       <aside
         ref={asideRef}
-        className={
-          clicked
-            ? "vh-100 position-absolute custom-aside-admin2 custom-red px-2"
-            : "vh-100 position-absolute custom-aside-admin1 custom-red"
-        }
+        className={`
+        ${
+          clicked ? "custom-aside-admin2 px-2" : "custom-aside-admin1"
+        } vh-100 position-fixed  custom-red
+          `}
       >
         <div className="h-100 d-flex flex-column justify-content-between align-items-center py-2">
           <div className="d-flex flex-column text-center">

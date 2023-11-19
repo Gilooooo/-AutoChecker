@@ -173,12 +173,13 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
   .filter((data) => data.answers.length > 0)
   .flatMap((data, index) =>
     data.answers.map((answer, questionNumber) => ({
-      type: `TYPE${index + 1}`,
+      type: `TYPE ${index + 1}`,
       answer,
       questionNumber: questionNumber + 1,
       questionType: formattedQuestionTypes.find(
         (formattedType) => formattedType.type === `TYPE ${index + 1}`
       ).questionType,
+      score: 0
     }))
   );
       const response = await axios.post('http://localhost:3001/results', {

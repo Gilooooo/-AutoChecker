@@ -23,16 +23,18 @@ export default function TestPaper() {
   const generateTestPaperdoc = async () => {
     const generateWord = document.getElementById("generateWord").checked;
     const generatePDF = document.getElementById("generatePDF").checked;
-  
+
     if (!generateWord && !generatePDF) {
-      alert("Please check at least one option (Word or PDF) before downloading the file.");
+      alert(
+        "Please check at least one option (Word or PDF) before downloading the file."
+      );
     } else {
       if (generateWord) {
         try {
           const response = await fetch(
             `http://localhost:3001/generateTestPaperdoc/${uid}`
           );
-  
+
           if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -47,14 +49,14 @@ export default function TestPaper() {
           console.error("Error generating Word document:", error);
         }
       }
-  
+
       if (generatePDF) {
         // Generate and download the PDF document as before
         try {
           const response = await fetch(
             `http://localhost:3001/generateTestPaperpdf/${uid}`
           );
-  
+
           if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -71,14 +73,14 @@ export default function TestPaper() {
       }
     }
   };
-  
+
   const handleSaveToDocsAndPDF = () => {
     const localStorageKey = `testPaperData_${TUPCID}_${sectionname}_${uid}`;
     const savedData = JSON.parse(localStorage.getItem(localStorageKey) || "[]");
-  
+
     generateTestPaperdoc(savedData);
   };
-  
+
   // Load data from localStorage when the component mounts
 
   const questionTypes = [
@@ -109,7 +111,6 @@ export default function TestPaper() {
     const localStorageKey2 = `TData_${TUPCID}_${sectionname}_${uid}`;
     const localStorageKey3 = `QData_${TUPCID}_${sectionname}_${uid}`;
     const localStorageKey4 = `SData_${TUPCID}_${sectionname}_${uid}`;
-    
 
     useEffect(() => {
       const savedData = localStorage.getItem(localStorageKey);
@@ -130,7 +131,7 @@ export default function TestPaper() {
         return [1];
       }
     });
-   
+
     // Modified code to save and retrieve fieldQuestionNumbers
     const [fieldQuestionNumbers, setFieldQuestionNumbers] = useState(() => {
       if (typeof localStorage !== "undefined") {
@@ -157,48 +158,53 @@ export default function TestPaper() {
     const maxScoreFromLocalStorage = localStorage.getItem(localStorageKey4);
 
     // Initialize `maxScore` with the value from local storage or the default value (10)
-    const [maxScore, setMaxScore] = useState(maxScoreFromLocalStorage ? parseInt(maxScoreFromLocalStorage) : 10);
-    
+    const [maxScore, setMaxScore] = useState(
+      maxScoreFromLocalStorage ? parseInt(maxScoreFromLocalStorage) : 10
+    );
+
     // Update the `maxScore` state and save it to local storage when it changes
     const handleMaxScore = (event) => {
       let value = event.target.value;
       value = value.replace(/[^0-9]/g, "");
       value = Math.min(Math.max(1, parseInt(value) || 1), 100);
-    
+
       setMaxScore(value);
-    
+
       // Save the updated `maxScore` to local storage
       localStorage.setItem(localStorageKey4, value);
     };
-    
-  const [totalScore, setTotalScore] = useState(0);
-  const [scoreDifference, setScoreDifference] = useState(0);
 
-  // Function to calculate and update the total score
-  const updateTotalScore = () => {
-    const newTotalScore = fields.reduce((acc, field) => {
-      const originalScore = parseInt(field.score) || 0;
-      const copiedScore = field.copiedFields.reduce((copiedAcc, copiedField) => {
-        return copiedAcc + (parseInt(copiedField.score) || 0);
+    const [totalScore, setTotalScore] = useState(0);
+    const [scoreDifference, setScoreDifference] = useState(0);
+
+    // Function to calculate and update the total score
+    const updateTotalScore = () => {
+      const newTotalScore = fields.reduce((acc, field) => {
+        const originalScore = parseInt(field.score) || 0;
+        const copiedScore = field.copiedFields.reduce(
+          (copiedAcc, copiedField) => {
+            return copiedAcc + (parseInt(copiedField.score) || 0);
+          },
+          0
+        );
+        return acc + originalScore + copiedScore;
       }, 0);
-      return acc + originalScore + copiedScore;
-    }, 0);
-    
-    // Calculate the score difference and update the state
-    const newScoreDifference = maxScore - newTotalScore;
-    setScoreDifference(newScoreDifference);
-    setTotalScore(newTotalScore);
-  };
-  
-  useEffect(() => {
-    // Update the total score whenever the fields change
-    updateTotalScore();
-  }, [maxScore, fields]);
+
+      // Calculate the score difference and update the state
+      const newScoreDifference = maxScore - newTotalScore;
+      setScoreDifference(newScoreDifference);
+      setTotalScore(newTotalScore);
+    };
+
+    useEffect(() => {
+      // Update the total score whenever the fields change
+      updateTotalScore();
+    }, [maxScore, fields]);
 
     const addNewField = () => {
       console.log("field eme...", fieldTitleNumbers.length);
       if (fieldTitleNumbers.length > 2) {
-        alert("Already reach the maximum type of test")
+        alert("Already reach the maximum type of test");
         return;
       }
 
@@ -235,13 +241,13 @@ export default function TestPaper() {
           TFOptions: [{ label: "T" }, { label: "F" }],
         },
       ]);
-     
+
       updateTotalScore();
-      
+
       setFieldTitleNumbers((prevNumbers) => [...prevNumbers, newFieldNumber]);
       setFieldQuestionNumbers((prevNumbers) => [...prevNumbers, 1]);
     };
-    
+
     const getExistingQuestionTypes = (currentFieldIndex) => {
       const existingTypes = new Set();
 
@@ -255,18 +261,20 @@ export default function TestPaper() {
     };
 
     const handleFieldChange = (index, field) => {
-      
       const updatedFields = [...fields];
-    
+
       // Ensure the score is at least 1
       const score = Math.min(Math.max(1, parseInt(field.score) || 1), 10);
       updatedFields[index] = { ...field, score: score };
-    
+
       if (field.questionType && field.questionType.value === "TrueFalse") {
         updatedFields[index].answer = field.answer;
-      } else if (field.questionType && field.questionType.value === "MultipleChoice") {
+      } else if (
+        field.questionType &&
+        field.questionType.value === "MultipleChoice"
+      ) {
         updatedFields[index].answer = field.answer;
-    
+
         // Update the answer for each option
         updatedFields[index].MCOptions.forEach((option, optionIndex) => {
           if (option.label === field.answer) {
@@ -276,23 +284,19 @@ export default function TestPaper() {
       } else {
         updatedFields[index].answer = field.answer;
       }
-    
+
       // Update the score for copied fields when changing the score in the original field
       updatedFields[index].copiedFields.forEach((copiedField) => {
         copiedField.score = score;
       });
-    
+
       setFields(updatedFields);
-    
+
       // Calculate the current score
       updateTotalScore();
       setSaveButtonDisabled(false);
-     
-    
     };
-    
 
-    
     const addRadioOption = (index, copiedIndex) => {
       const updatedFields = [...fields];
       if (copiedIndex === undefined) {
@@ -306,7 +310,9 @@ export default function TestPaper() {
           updatedFields[index].MCOptions.push({ label: newOption, text: "" });
           setFields(updatedFields);
         } else {
-          console.error("Cannot add more options. Maximum of 5 options allowed.");
+          console.error(
+            "Cannot add more options. Maximum of 5 options allowed."
+          );
         }
       } else {
         if (!updatedFields[index].copiedFields[copiedIndex].MCOptions) {
@@ -324,19 +330,23 @@ export default function TestPaper() {
           });
           setFields(updatedFields);
         } else {
-          console.error("Cannot add more options. Maximum of 5 options allowed.");
+          console.error(
+            "Cannot add more options. Maximum of 5 options allowed."
+          );
         }
       }
     };
-  
+
     const subtractRadioOption = (index, copiedIndex) => {
       const updatedFields = [...fields];
-      
+
       if (copiedIndex === undefined) {
         if (updatedFields[index].MCOptions.length > 3) {
           updatedFields[index].MCOptions.pop();
         } else {
-          console.error("Cannot subtract option. Minimum of 3 options required.");
+          console.error(
+            "Cannot subtract option. Minimum of 3 options required."
+          );
         }
       } else if (
         updatedFields[index].copiedFields &&
@@ -347,7 +357,9 @@ export default function TestPaper() {
         ) {
           updatedFields[index].copiedFields[copiedIndex].MCOptions.pop();
         } else {
-          console.error("Cannot subtract option. Minimum of 3 options required.");
+          console.error(
+            "Cannot subtract option. Minimum of 3 options required."
+          );
         }
       }
       setFields(updatedFields);
@@ -390,7 +402,7 @@ export default function TestPaper() {
         answer: "", // Reset the answer for the copied field
         copiedFields: [],
       };
-    
+
       // If the question type is "MultipleChoice," initialize MCOptions with default choices
       if (copiedField.questionType.value === "MultipleChoice") {
         copiedField.MCOptions = [
@@ -400,81 +412,96 @@ export default function TestPaper() {
           { label: "D", text: "" },
         ];
       }
-      
+
       if (updatedFields[index].copiedFields.length >= 19) {
-        setErrorMessage("You've reach the maximum number in this question type")
-        
+        setErrorMessage(
+          "You've reach the maximum number in this question type"
+        );
       }
       if (!updatedFields[index].copiedFields) {
         updatedFields[index].copiedFields = [];
       }
       updatedFields[index].copiedFields.splice(copiedIndex + 1, 0, copiedField);
-    
+
       setFields(updatedFields);
-    
+
       // Update the total score when copying an empty field
       updateTotalScore();
-      
-      
     };
-    
-    
-    
 
     const shuffleArray = (array) => {
       const shuffledArray = [...array];
       for (let i = shuffledArray.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
+        [shuffledArray[i], shuffledArray[j]] = [
+          shuffledArray[j],
+          shuffledArray[i],
+        ];
       }
       return shuffledArray;
     };
 
     const handleCopyFieldData = (index, copiedIndex) => {
       const updatedFields = [...fields];
-  
+
       if (!updatedFields[index].copiedFields) {
         updatedFields[index].copiedFields = [];
       }
-  
-      const sourceQuestion = copiedIndex === undefined ? updatedFields[index] : updatedFields[index].copiedFields[copiedIndex];
-  
-      const originalLabels = sourceQuestion.MCOptions.map(option => option.label);
+
+      const sourceQuestion =
+        copiedIndex === undefined
+          ? updatedFields[index]
+          : updatedFields[index].copiedFields[copiedIndex];
+
+      const originalLabels = sourceQuestion.MCOptions.map(
+        (option) => option.label
+      );
       const shuffledLabels = shuffleArray(originalLabels);
-  
+
       // Ensure the shuffled labels are different from the original order
       while (shuffledLabels.every((label, i) => label === originalLabels[i])) {
         shuffleArray(shuffledLabels);
       }
-  
+
       // Create a new set of MCOptions with shuffled text but original labels
-      const shuffledMCOptions = sourceQuestion.MCOptions.map((option, optionIndex) => ({
-        label: option.label,
-        text: sourceQuestion.MCOptions.find(originalOption => originalOption.label === shuffledLabels[optionIndex]).text,
-      }));
-  
+      const shuffledMCOptions = sourceQuestion.MCOptions.map(
+        (option, optionIndex) => ({
+          label: option.label,
+          text: sourceQuestion.MCOptions.find(
+            (originalOption) =>
+              originalOption.label === shuffledLabels[optionIndex]
+          ).text,
+        })
+      );
+
       const copiedData = {
         questionType: sourceQuestion.questionType,
         question: sourceQuestion.question,
         answer: sourceQuestion.answer,
         score: sourceQuestion.score,
         MCOptions: shuffledMCOptions,
-        TFOptions: sourceQuestion.TFOptions.map(option => ({ ...option })), // Deep copy TFOptions
+        TFOptions: sourceQuestion.TFOptions.map((option) => ({ ...option })), // Deep copy TFOptions
       };
-      
+
       if (updatedFields[index].copiedFields.length >= 19) {
-        setErrorMessage("You've reach the maximum number in this question type")
+        setErrorMessage(
+          "You've reach the maximum number in this question type"
+        );
         return;
       }
       if (copiedIndex === undefined) {
         updatedFields[index].copiedFields.splice(index, 0, copiedData);
       } else {
-        updatedFields[index].copiedFields.splice(copiedIndex + 1, 0, copiedData);
+        updatedFields[index].copiedFields.splice(
+          copiedIndex + 1,
+          0,
+          copiedData
+        );
       }
-  
+
       setFields(updatedFields);
     };
-    
+
     const handleReset = (index, copiedIndex) => {
       const updatedFields = [...fields];
       if (copiedIndex === undefined) {
@@ -507,7 +534,7 @@ export default function TestPaper() {
       const updatedFields = [...fields];
       updatedFields[fieldIndex].copiedFields.splice(copiedIndex, 1);
       setFields(updatedFields);
-      setErrorMessage("")
+      setErrorMessage("");
     };
 
     const handleRemoveField = (index) => {
@@ -546,22 +573,17 @@ export default function TestPaper() {
       setFields(updatedFields);
     };
 
-    
     const handleSave = async () => {
       const localStorageKey = `testPaperData_${TUPCID}_${sectionname}_${uid}`;
 
-      
-
       const savedData = JSON.parse(
         localStorage.getItem(localStorageKey) || "[]"
-      ); 
- 
+      );
+
       const typeScores = {};
       localStorage.setItem(localStorageKey, JSON.stringify(fields));
 
       const updatedSavedValues = [];
-
-      
 
       fields.forEach((field, index) => {
         const questionData = {
@@ -637,16 +659,17 @@ export default function TestPaper() {
         }
       });
 
-      const totalScore = updatedSavedValues.reduce((total, data) => total + data.score, 0);
-  const scoreDifference = maxScore - totalScore;
-  const typeScores2 = { 'TotalScore': totalScore };
-  updatedSavedValues.push(typeScores2);
+      const totalScore = updatedSavedValues.reduce(
+        (total, data) => total + data.score,
+        0
+      );
+      const scoreDifference = maxScore - totalScore;
+      const typeScores2 = { TotalScore: totalScore };
+      updatedSavedValues.push(typeScores2);
 
- 
-  setSaveButtonDisabled(true);
+      setSaveButtonDisabled(true);
 
       setSavedValues(updatedSavedValues);
-       
 
       try {
         console.log("DATA SENDING....", updatedSavedValues);
@@ -665,9 +688,7 @@ export default function TestPaper() {
           } else {
             setErrorMessage("Error updating data. Please try again.");
           }
-
         } else {
-         
           const response = await axios.post(
             "http://localhost:3001/createtestpaper",
             {
@@ -684,55 +705,46 @@ export default function TestPaper() {
             setErrorMessage("Data saved successfully.");
           } else {
             setErrorMessage("Error saving data. Please try again.");
-            
           }
         }
         setTimeout(() => {
-          setErrorMessage('');
+          setErrorMessage("");
         }, 3000);
-      
-    setSaveButtonDisabled(true);
-   
+
+        setSaveButtonDisabled(true);
       } catch (error) {
         console.error("Error saving/updating data:", error);
         setErrorMessage("Error saving/updating data. Please try again.");
       }
-      
-    
-      
-      
-     
     };
 
-    
-    
-    
     //beta testing document
 
     return (
       <div className="d-flex flex-column justify-content-center align-items-center container-sm col-lg-8 col-11 border border-dark rounded py-2">
         {fields.map((field, index) => (
-          <fieldset className="row col-lg-9 col-11 justify-content-center" key={index}>
+          <fieldset
+            className="row col-12 justify-content-center"
+            key={index}
+          >
             <legend className="p-0">
               TYPE {fieldTitleNumbers[index]}
               <p>
                 Score: {totalScore}/{maxScore}
               </p>
-              <label>TOTAL SCORE:</label>
+              <label>TOTAL SCORE:</label>&nbsp;
               <input
-  type="number"
-  placeholder="Max Score (1-100)"
-  value={maxScore}
-  onChange={handleMaxScore}
-  min="10"
-  max="100"
-/>
-
+              className="rounded border border-dark text-center"
+                type="number"
+                placeholder="Max Score (1-100)"
+                value={maxScore}
+                onChange={handleMaxScore}
+                min="10"
+                max="100"
+              />
             </legend>
             <div className="row align-items-center p-0">
-            
               <span className="col-2 p-0 ">TYPE OF TEST:</span>
-          
 
               <Select
                 className="col-8"
@@ -755,25 +767,28 @@ export default function TestPaper() {
                   handleFieldChange(index, { ...field, score: e.target.value })
                 }
               />
-
             </div>
 
             <div className="col-12 p-0">
               <div>QUESTION NO. {fieldQuestionNumbers[index]}</div>
             </div>
-            <div className="row p-0 mb-1"></div>
-            <input
-              className="col-12 border border-dark rounded py-1 px-3 mb-1"
-              type="text"
-              placeholder="Question"
-              value={field.question}
-              onChange={(e) =>
-                handleFieldChange(index, { ...field, question: e.target.value })
-              }
-            />
+            <div className="row px-2">
+              <input
+                className="col-12 border border-dark rounded py-1 px-3 mb-1"
+                type="text"
+                placeholder="Question"
+                value={field.question}
+                onChange={(e) =>
+                  handleFieldChange(index, {
+                    ...field,
+                    question: e.target.value,
+                  })
+                }
+              />
+            </div>
 
             {field.questionType && field.questionType.value === "TrueFalse" ? (
-              <div className="p-0">
+              <div className="px-3">
                 {field.TFOptions.map((option, optionIndex) => (
                   <div key={optionIndex}>
                     <label>
@@ -795,7 +810,7 @@ export default function TestPaper() {
               </div>
             ) : field.questionType &&
               field.questionType.value === "MultipleChoice" ? (
-              <div>
+              <div className="px-3">
                 {field.MCOptions.map((option, optionIndex) => (
                   <div key={optionIndex} className="mb-1">
                     <label className="col-1">
@@ -827,24 +842,24 @@ export default function TestPaper() {
                     />
                   </div>
                 ))}
-                 
+          
                 <div className="d-flex gap-2 mb-1">
                   <button
                     onClick={() => addRadioOption(index)}
-                    className="border border-dark rounded py-1 px-3"
+                    className="btn btn-outline-dark btn-sm"
                   >
                     + Option
                   </button>
                   <button
                     onClick={() => subtractRadioOption(index)}
-                    className="border border-dark rounded py-1 px-3"
+                    className="btn btn-outline-dark btn-sm"
                   >
                     - Option
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="p-0">
+              <div className="px-2">
                 <input
                   className="col-12 border border-dark rounded mb-1 py-1 px-3"
                   type="text"
@@ -859,22 +874,15 @@ export default function TestPaper() {
                 />
               </div>
             )}
-            <div className="d-flex gap-1">
+            <div className="d-flex gap-1 px-3">
               <button
-                className="border border-dark rounded col-1 py-1"
+                className="btn btn-outline-dark btn-sm"
                 onClick={() => handleReset(index)}
               >
-                <img
-                  src="/reset.svg"
-                  alt="reset"
-                  height={20}
-                  width={20}
-                  className="pb-1"
-                />
+                <i className="bi bi-arrow-repeat"></i>
               </button>
-
               <button
-                className="col-2 border border-dark rounded px-3"
+                className="btn btn-outline-dark btn-sm"
                 onClick={() => handleCopyFieldData(index)}
               >
                 Copy
@@ -887,7 +895,7 @@ export default function TestPaper() {
               <div className="p-0 row justify-content-center">
                 {field.copiedFields.map((copiedField, copiedIndex) => (
                   <div
-                    className="p-0 col-12"
+                    className="p-0 px-2 col-12 m-0 "
                     key={copiedIndex}
                     style={{ marginBottom: "10px" }}
                   >
@@ -917,7 +925,7 @@ export default function TestPaper() {
 
                     {field.questionType &&
                     field.questionType.value === "TrueFalse" ? (
-                      <div>
+                      <div className="px-2">
                         {field.TFOptions.map((option, optionIndex) => (
                           <div key={optionIndex}>
                             <label>
@@ -944,7 +952,7 @@ export default function TestPaper() {
                       </div>
                     ) : field.questionType &&
                       field.questionType.value === "MultipleChoice" ? (
-                      <div>
+                      <div className="px-2">
                         {copiedField.MCOptions.map((option, optionIndex) => (
                           <div key={optionIndex}>
                             <label className="col-1">
@@ -984,13 +992,13 @@ export default function TestPaper() {
                         ))}
                         <div className="d-flex gap-2 mb-1">
                           <button
-                            className="border border-dark rounded py-1 px-3"
+                            className="btn btn-outline-dark btn-sm"
                             onClick={() => addRadioOption(index, copiedIndex)}
                           >
                             + Option
                           </button>
                           <button
-                            className="border border-dark rounded py-1 px-3"
+                            className="btn btn-outline-dark btn-sm"
                             onClick={() =>
                               subtractRadioOption(index, copiedIndex)
                             }
@@ -1020,32 +1028,25 @@ export default function TestPaper() {
                         />
                       </div>
                     )}
-                    <div className="d-flex gap-2">
+                    <div className="d-flex gap-2 px-2">
                       <button
-                        className="col-1 border border-dark rounded py-1"
+                        className="btn btn-outline-dark btn-sm"
                         onClick={() => handleReset(index, copiedIndex)}
                       >
-                        <img
-                          src="/reset.svg"
-                          alt="reset"
-                          height={20}
-                          width={20}
-                          className="pb-1"
-                        />
+                        <i class="bi bi-arrow-repeat"></i>
                       </button>
 
                       <button
-                        className="col-1 border border-dark rounded py-1"
+                        className="btn btn-outline-dark btn-sm"
                         onClick={() =>
                           handleRemoveCopiedField(index, copiedIndex)
-                         
                         }
                       >
                         <span className="p-2">-</span>
                       </button>
 
                       <button
-                        className="py-1 px-3 border border-dark rounded col-2"
+                        className="btn btn-outline-dark btn-sm"
                         onClick={() => handleCopyFieldData(index, copiedIndex)}
                         disabled={scoreDifference <= 0}
                       >
@@ -1056,10 +1057,9 @@ export default function TestPaper() {
                 ))}
               </div>
             )}
-            <div className="d-flex mb-1 mt-1 gap-1">
-              
+            <div className="d-flex justify-content-center mb-1 mt-1 gap-1">
               <button
-                className="py-1 px-3 border border-dark rounded"
+                className="btn btn-outline-dark btn-sm"
                 onClick={() =>
                   handleCopyField(index, field.copiedFields.length)
                 }
@@ -1069,7 +1069,7 @@ export default function TestPaper() {
               </button>
 
               <button
-                className="py-1 px-3 border border-dark rounded"
+                className="btn btn-outline-dark btn-sm"
                 onClick={() => handleRemoveField(index)}
               >
                 Remove Test {fieldTitleNumbers[index]}
@@ -1077,34 +1077,43 @@ export default function TestPaper() {
             </div>
           </fieldset>
         ))}
-       <div>
-      <p>Remaining Score: {scoreDifference}</p>
-    </div>
-
-    {errorMessage && <p className="error-message">{errorMessage}</p>}       
+        <div>
+          <p className="m-1 fw-bold">Remaining Score: {scoreDifference}</p>
+        </div>
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
         <div className="d-flex gap-2">
           <button
-            className="py-1 px-3 border border-dark rounded"
+            className="btn btn-outline-dark"
             onClick={addNewField}
           >
             Add New Type
           </button>
           <button
-  className="py-1 px-3 border border-dark rounded"
-  onClick={handleSave}
-  disabled={isSaveButtonDisabled || scoreDifference !== 0 || fields.some((f) => !f.question || !f.answer)}
->
-  Save All
-</button>
-
-
+            className="btn btn-outline-dark"
+            onClick={handleSave}
+            disabled={
+              isSaveButtonDisabled ||
+              scoreDifference !== 0 ||
+              fields.some((f) => !f.question || !f.answer)
+            }
+          >
+            Save All
+          </button>
         </div>
-        <input type="checkbox" id="generateWord" /> Generate Word
-<input type="checkbox" id="generatePDF" /> Generate PDF
+        <div className="d-flex flex-column mt-2">
+          <div className="d-flex gap-2">
+            <input type="checkbox" id="generateWord" />
+            <label>Generate Word</label>
+          </div>
+          <div className="d-flex gap-2">
+            <input type="checkbox" id="generatePDF" />{" "}
+            <label>Generate PDF</label>
+          </div>
+        </div>
 
         <div className="d-flex gap-1 mt-1">
           <button
-            className="border border-dark rounded py-1 px-3"
+            className="btn btn-outline-dark"
             onClick={handleSaveToDocsAndPDF}
           >
             Download File
@@ -1118,14 +1127,12 @@ export default function TestPaper() {
     <main className="w-100 min-vh-100 overflow-hidden p-2">
       <section>
         <div className="d-flex align-items-center">
-        <Link
-            href= "/Faculty/ListOfTest"
-          >
-           <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
+          <Link href="/Faculty/ListOfTest">
+            <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
           </Link>
           &nbsp;
           <h3 className="m-0">
-            {sectionname}: {semester} - {testname}  UID: {uid} 
+            {sectionname}: {semester} - {testname} UID: {uid}
           </h3>
         </div>
         <ul className="d-flex flex-wrap justify-content-around mt-3 list-unstyled">
@@ -1138,35 +1145,38 @@ export default function TestPaper() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                
               },
             }}
             className="text-decoration-none link-dark"
           >
             <li className="m-0 fs-5">ANSWER SHEET</li>
           </Link>
-          <Link href={{
+          <Link
+            href={{
               pathname: "/Faculty/Test/AnswerKey",
               query: {
                 testname: testname,
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                
               },
-            }} className="text-decoration-none link-dark">
+            }}
+            className="text-decoration-none link-dark"
+          >
             <li className="m-0 fs-5">ANSWER KEY</li>
           </Link>
-          <Link href={{
+          <Link
+            href={{
               pathname: "/Faculty/Test/Records",
               query: {
                 testname: testname,
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                
               },
-            }}className="text-decoration-none link-dark">
+            }}
+            className="text-decoration-none link-dark"
+          >
             <li className="m-0 fs-5">RECORDS</li>
           </Link>
         </ul>
