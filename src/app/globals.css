@@ -25,10 +25,10 @@ input[type="number"]::-webkit-outer-spin-button {
   background-color: red;
 }
 .custom-aside-admin1 {
-  left: -300px;
+  display: none;
 }
 .custom-aside-admin2 {
-  left: 0px;
+  display: block;
   z-index: 5;
   width: 250px;
 }
