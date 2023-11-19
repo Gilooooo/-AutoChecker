@@ -6,7 +6,6 @@ import { useState } from "react";
 
 function ListOfTest({ setClicked, clicked }) {
   const { TUPCID } = useTUPCID();
-  const [successful, setSuccess] = useState(false);
   const [published, setPublished] = useState(false);
   const [TestName, setTestName] = useState("");
   const [Subject, setSubject] = useState("");
@@ -20,6 +19,7 @@ function ListOfTest({ setClicked, clicked }) {
   const [sorted, setSorted] = useState(false);
   const [publishedTest, setPublishedTest] = useState([]);
   const [sectionUid, setSectionUid] = useState("");
+  const [publishing, setPublishing] = useState(false);
 
   const add = async () => {
     const New = {
@@ -29,7 +29,7 @@ function ListOfTest({ setClicked, clicked }) {
       SectionName: section,
       UidProf: TUPCID,
       Semester: semester + ":" + exam,
-      Uid_section: sectionUid
+      Uid_section: sectionUid,
     };
     if (
       TestName != "" &&
@@ -110,19 +110,18 @@ function ListOfTest({ setClicked, clicked }) {
         data
       );
       if (response.status === 200) {
-        setSuccess(true);
       }
     } catch (err) {
       if (err.response && err.response.status === 409) {
         setPublished(true);
-      }else{
-        console.error(err)
+      } else {
+        console.error(err);
       }
     }
   };
   const Uidtest = [List.map((Uids) => Uids.Uid_Test)];
   const checkingPublish = async () => {
-    try {  
+    try {
       const response = await axios.post(
         `http://localhost:3001/CheckPublish`,
         Uidtest
@@ -168,7 +167,7 @@ function ListOfTest({ setClicked, clicked }) {
       clearInterval(fetching);
     };
   }, [TUPCID, sorted, Uidtest]);
-  
+
   const generate = () => {
     const randoms = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     var generated = "";
@@ -202,7 +201,10 @@ function ListOfTest({ setClicked, clicked }) {
               >
                 <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
               </Link>
-              <h2 className="m-0 text-sm-start text-center w-100 pe-3" onClick={() => console.log(publishedTest)}>
+              <h2
+                className="m-0 text-sm-start text-center w-100 pe-3"
+                onClick={() => console.log(publishedTest)}
+              >
                 FACULTY
               </h2>
             </div>
@@ -289,7 +291,13 @@ function ListOfTest({ setClicked, clicked }) {
                           Choose...
                         </option>
                         {sectionSubjectName.map((sections, index) => (
-                          <option value={[sections.Section_Name, sections.Uid_Section]} key={index}>
+                          <option
+                            value={[
+                              sections.Section_Name,
+                              sections.Uid_Section,
+                            ]}
+                            key={index}
+                          >
                             {sections.Section_Name} {sections.Uid_Section}
                           </option>
                         ))}
@@ -435,11 +443,15 @@ function ListOfTest({ setClicked, clicked }) {
                     "
                   >
                     {test.TestName} {test.Subject} {test.Section_Name}&nbsp;
-                    {test.Uid_Test} 
+                    {test.Uid_Test}
                   </Link>
                 </span>
                 <div className="btn-group gap-2" key={index}>
-                {publishedTest.includes(test.Uid_Test) ? <span className="text-success">Published</span> : <span className="text-danger">Not Publish</span>}
+                  {publishedTest.includes(test.Uid_Test) ? (
+                    <span className="text-success">Published</span>
+                  ) : (
+                    <span className="text-danger">Not Publish</span>
+                  )}
                   <i className="bi bi-three-dots" data-bs-toggle="dropdown"></i>
                   <ul className="dropdown-menu">
                     <li>
@@ -453,16 +465,9 @@ function ListOfTest({ setClicked, clicked }) {
                     <li>
                       <a
                         className="dropdown-item"
-                        onClick={() =>
-                          publish({
-                            TestName: test.TestName,
-                            UidTest: test.Uid_Test,
-                            Subject: test.Subject,
-                            SectionName: test.Section_Name,
-                            Semester: test.Semester,
-                            SectionUid: test.Uid_Section
-                          })
-                        }
+                        type="button"
+                        data-bs-toggle="modal"
+                        data-bs-target={`#Publishing${index}`}
                       >
                         Publish
                       </a>
@@ -470,38 +475,60 @@ function ListOfTest({ setClicked, clicked }) {
                   </ul>
                 </div>
               </div>
+              {/* Modal */}
+              <div
+                className="modal fade"
+                tabIndex="-1"
+                id={`Publishing${index}`}
+                aria-labelledby={`publishing${index}`}
+                aria-hidden="true"
+              >
+                <div className="modal-dialog modal-dialog-centered">
+                  <div className="modal-content border border-dark">
+                    <div className="modal-header">
+                      <h5 className="modal-title" id="publishing">
+                        Publishing Test
+                      </h5>
+                    </div>
+                    <div className="modal-body">
+                      <p className="text-center">
+                        Are you sure to publish this test?
+                      </p>
+                    </div>
+                    <div className="modal-footer align-self-center">
+                      <button
+                        type="button"
+                        className="btn btn-success"
+                        data-bs-dismiss="modal"
+                        onClick={() =>
+                          publish({
+                            TestName: test.TestName,
+                            UidTest: test.Uid_Test,
+                            Subject: test.Subject,
+                            SectionName: test.Section_Name,
+                            Semester: test.Semester,
+                            SectionUid: test.Uid_Section,
+                          })
+                        }
+                      >
+                        YES
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        data-bs-dismiss="modal"
+                      >
+                        CANCEL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* end modal */}
             </div>
           ))}
         </div>
       </section>
-      {/* Modal */}
-      {successful && (
-        <div className="d-block modal" tabIndex="-1">
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border border-dark">
-              <div className="modal-header">
-                <h5 className="modal-title">Success</h5>
-              </div>
-              <div className="modal-body">
-                <p className="text-center">
-                  The test been published
-                </p>
-              </div>
-              <div className="modal-footer align-self-center">
-                <button
-                  type="button"
-                  className="btn btn-success"
-                  data-bs-dismiss="modal"
-                  onClick={() => setSuccess(!successful)}
-                >
-                  OK
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* end modal */}
       {/* Modal */}
       {published && (
         <div className="d-block modal" tabIndex="-1">
