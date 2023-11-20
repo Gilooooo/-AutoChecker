@@ -57,7 +57,7 @@ def document_scanner(image, upload_folder):
     warped_filename = os.path.join(upload_folder, 'image4_warped.jpg')
     cv2.imwrite(warped_filename, warped)
 
-    margin = 10  # You can adjust this value to control the amount of cropping
+    margin = 25  # You can adjust this value to control the amount of cropping
     height, width = warped.shape[:2]
     cropped = warped[margin:height - margin, margin:width - margin]
     # Save the cropped and transformed image

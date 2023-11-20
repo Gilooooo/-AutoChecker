@@ -1,13 +1,12 @@
 import cv2
 import os
 import imutils
-
 def type_scanner(image, upload_folder):
     image = imutils.resize(image, height=image.shape[0])
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
     edged = cv2.Canny(blur, 50, 150)
-
+    
     contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=lambda c: (cv2.boundingRect(c)[1], cv2.boundingRect(c)[0]))
 
@@ -15,7 +14,7 @@ def type_scanner(image, upload_folder):
     for i in range(len(contours) - 1):
         if cv2.boundingRect(contours[i])[0] > cv2.boundingRect(contours[i + 1])[0]:
             contours[i], contours[i + 1] = contours[i + 1], contours[i]
-
+    
     result = image.copy()
     cv2.drawContours(result, contours, -1, (0, 255, 0), 2)
 
@@ -33,12 +32,13 @@ def type_scanner(image, upload_folder):
         margin = 20
         height, width = cropped.shape[:2]
         cropped = cropped[margin:height - margin, margin:width - margin]
+        cv2.imwrite(file_name, cropped)
 
         if i >= 1: 
-            left_crop_margin = 110
-            right_crop_margin = 50
-            cropped = cropped[:, left_crop_margin:-right_crop_margin]
-
+                left_crop_margin = 80
+                cropped = cropped[:, left_crop_margin:]
+            
         cv2.imwrite(file_name, cropped)
 
     return cropped
+
