@@ -181,7 +181,7 @@ export default function Records() {
         </ul>
 
         {/* Content */}
-        <section className="container col-md-8 col-12 col-xl-6 mt-3 py-4 col-10 px-3 border border-dark rounded h-75">
+        <section className="container col-md-8 col-12 col-xl-6 mt-4 py-4 col-10 px-3 border border-dark rounded h-75">
           <div className="border border-dark rounded h-100 overflow-auto">
             {/* Table for Student Records */}
             <table className="table table-bordered table-striped">
