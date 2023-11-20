@@ -25,18 +25,22 @@ function AdminLogin() {
       if(response.status === 200){
         setTUPCID(response.data.Uid_Account);
         router.push(`/Admin_Page/Admin?Username`);     
-      }else if(response.status === 204){
+      }else if(response.status === 409){
+        router.push("/Login")
         console.log("Account not found")
       } 
     } catch (err) {
+      if (err.response && err.response.status === 409){
+        router.push("/Login")
+      }
       console.error(err)
     }
   };
   return (
     <main className="vh-100 d-flex justify-content-center align-items-center ">
       <section className="container col-xl-4 col-lg-6 col-md-7 col-11 d-flex flex-column border border-dark rounded px-0 pt-5 pb-4 gap-2 ">
-        <h4 className="text-center">ADMIN LOGIN</h4>
-        <form className="container row text-center align-self-center justify-content-center gap-3 p-0">
+        <h4 className="text-center fw-bold">ADMIN LOGIN</h4>
+        <form className="container row text-center align-self-center justify-content-center gap-sm-3 gap-2 p-0">
           <div className="row justify-content-center gap-1">
             <p className="col-sm-4 m-0 align-self-center">Account Number</p>
             <input

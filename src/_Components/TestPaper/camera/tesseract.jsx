@@ -18,6 +18,7 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
   const [allImagesProcessed, setAllImagesProcessed] = useState(false);
   const hasSentDataRef = useRef(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isSendButtonDisabled, setIsSendButtonDisabled] = useState(false);
 
   
   const recognizeText = async () => {
@@ -145,22 +146,15 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
       // If data has already been sent, do nothing
       return;
     }
-
+  
     // Set the flag to indicate that data has been sent
     hasSentDataRef.current = true;
-
+  
     setIsSendingData(true);
-
+  
     try {
-      // Check if UID matches before sending data
-      if (UID !== UIDintestpaper) {
-        alert('UID DOES NOT MATCH');
-        setIsPopUpVisible(false);
-        setLoadingText('');
-        setIsSendingData(false);
-        return;
-      }
-
+      
+  
       // Combine information from all images into a single set of data
       const formattedQuestionTypes = textDataArray.flatMap((data) =>
         data.questionType.map((type, index) => ({
@@ -168,32 +162,46 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
           questionType: type,
         }))
       );
-
+  
       const answersByImage = textDataArray
-  .filter((data) => data.answers.length > 0)
-  .flatMap((data, index) =>
-    data.answers.map((answer, questionNumber) => ({
-      type: `TYPE ${index + 1}`,
-      answer,
-      questionNumber: questionNumber + 1,
-      questionType: formattedQuestionTypes.find(
-        (formattedType) => formattedType.type === `TYPE ${index + 1}`
-      ).questionType,
-      score: 0
-    }))
-  );
-      const response = await axios.post('http://localhost:3001/results', {
-        TUPCID: TUPCID,
-        UID: UID,
+        .filter((data) => data.answers.length > 0)
+        .flatMap((data, index) =>
+          data.answers.map((answer, questionNumber) => ({
+            type: `TYPE ${index + 1}`,
+            answer,
+            questionNumber: questionNumber + 1,
+            questionType: formattedQuestionTypes.find(
+              (formattedType) => formattedType.type === `TYPE ${index + 1}`
+            ).questionType,
+            score: 0,
+          }))
+        );
+  
+      // Perform a POST request to add data
+      await axios.post('http://localhost:3001/results', {
+        TUPCID,
+        UID,
         questionType: formattedQuestionTypes,
         answers: answersByImage,
       });
-
-      console.log('Data sent to the server:', response.data);
-
+  
+     
+      const response = await axios.get(`http://localhost:3001/resultsexist/${UID}`);
+  
+      if (response.status === 200) {
+        
+        await axios.put(`http://localhost:3001/updateresults/${TUPCID}`, {
+          questionType: formattedQuestionTypes,
+          answers: answersByImage,
+        });
+      } else if (response.status === 404) {
+       
+        console.log('Data does not exist yet.');
+      }
+  
       setLoadingProgress(100);
       setLoadingText('COMPLETE');
-
+  
       setTimeout(() => {
         setLoadingText('');
       }, 5000);
@@ -209,12 +217,21 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
       setAllImagesProcessed(false); // Reset the all images processed flag
     }
   };
+  
 
   useEffect(() => {
     if (allImagesProcessed && isSendingData) {
+      const delay = 12000; // 12 seconds in milliseconds
+      const timer = setTimeout(() => {
+        
+        setIsSendButtonDisabled(false); 
+      }, delay);
       sendTextToServer();
+
+      return () => clearTimeout(timer);
     }
   }, [allImagesProcessed, isSendingData]);
+
 
   const cancelAction = () => {
     setIsPopUpVisible(false);
@@ -229,8 +246,9 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
     <div>
       {isPopUpVisible && (
         <div className="popup">
-          <h2>Confirm Action</h2>
-          <p>Do you want to send the data to the database?</p>
+          <h2>PICTURE CONVERTED TO TEXT</h2>
+          <p>Extracted Text: {recognizedText}</p>
+          <p>PROCESS ALMOST COMPLETE...CONTINUE?</p>
           <button onClick={sendTextToServer}>Send</button>
           <button  onClick={cancelAction}>Cancel</button>
         </div>

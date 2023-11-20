@@ -29,6 +29,7 @@ export default function AnswerKey() {
   const [comparisonResults, setComparisonResults] = useState(null);
   const [totalScore, setTotalScore] = useState(0);
   const [totalScore2, setTotalScore2] = useState(0);
+  const [Wrong, setWrong] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
   const [students, setStudents] = useState([]);
 
@@ -80,7 +81,7 @@ export default function AnswerKey() {
           if (type && answers[index]) {
             const questionNumber = questionNumbers[index];
             const answer = answers[index];
-            const questionScore = score[index]; // Get score for this question
+            const questionScore = score[index]; 
 
             if (!acc[type]) {
               acc[type] = {
@@ -103,8 +104,7 @@ export default function AnswerKey() {
         }));
 
         setTestData(organizedDataArray);
-        setTestType(fetchedTestType || "No Test Paper Created Yet");
-        setTotalScore(calculatedTotalScore);
+       
       } else {
         console.error("Error fetching data");
       }
@@ -183,30 +183,40 @@ export default function AnswerKey() {
 
 
   // Inside the useEffect that calculates totalScore2
-useEffect(() => {
-  const calculateTotalScore2 = () => {
-    let totalScore2 = 0;
-
-    studentAnswerData.forEach((answerSection, index) => {
-      answerSection.answers.forEach((answer) => {
-        const matchingTestSection = testData[index];
-        if (matchingTestSection) {
-          const matchingQuestion = matchingTestSection.questions.find(
-            (question) => question.questionNumber === answer.questionNumber
-          );
-
-          if (matchingQuestion && matchingQuestion.answer === answer.answer) {
-            totalScore2 += matchingQuestion.score;
+  useEffect(() => {
+    const calculateTotalScore2 = () => {
+      let totalScore2 = 0;
+  
+      studentAnswerData.forEach((answerSection, index) => {
+        answerSection.answers.forEach((answer) => {
+          const matchingTestSection = testData[index];
+          if (matchingTestSection) {
+            const matchingQuestion = matchingTestSection.questions.find(
+              (question) => question.questionNumber === answer.questionNumber
+            );
+  
+            if (matchingQuestion && matchingQuestion.answer === answer.answer) {
+              totalScore2 += matchingQuestion.score;
+            }
           }
-        }
+        });
       });
-    });
-
-    setTotalScore2(totalScore2);
-  };
-
-  calculateTotalScore2();
-}, [studentAnswerData, testData]);
+  
+      setTotalScore2(totalScore2);
+      const totalQuestions = testData.reduce((acc, testSection) => {
+        return acc + testSection.questions.length; // Counting total questions
+      }, 0);
+  
+      const wrongAnswers = totalQuestions - totalScore2; 
+      
+      setWrong(wrongAnswers)// Calculating wrong answers
+  
+      console.log("Total Score 2:", totalScore2);
+      console.log("Wrong Answers:", wrongAnswers);
+    };
+  
+    calculateTotalScore2();
+  }, [studentAnswerData, testData])
 
   
   useEffect(() => {
@@ -244,6 +254,8 @@ useEffect(() => {
         TUPCID: studentid,
         UID: uidfromtestpaper,
         results: updatedAnswers,
+        correct: totalScore2,
+        wrong: Wrong , 
         totalscore2: totalScore2,
         maxscore: totalScore
       };
@@ -251,7 +263,7 @@ useEffect(() => {
       const resultResponse = await axios.post('http://localhost:3001/sendanswertoresult', sendData);
   
       console.log('Data sent to /sendanswertoresult endpoint:', resultResponse.data);
-      //setShowPopup(false);
+      setShowPopup(false);
     } catch (error) {
       console.error('Error sending data:', error);
     }

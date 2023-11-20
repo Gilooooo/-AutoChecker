@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useRef } from "react";
 import { useState } from "react";
 
-function AdminAside({clicked, setClicked}) {
+function AdminAside({ clicked, setClicked }) {
   const path = usePathname();
   const { setTUPCID, TUPCID } = useTUPCID();
   const [information, setInformation] = useState([]);
@@ -20,10 +20,12 @@ function AdminAside({clicked, setClicked}) {
 
   const fetchingAdmin = async () => {
     try {
-      const response = await axios.get(`http://localhost:3001/AdminAside?Uid_Account=${TUPCID}`);
-      setInformation(response.data[0])
+      const response = await axios.get(
+        `http://localhost:3001/AdminAside?Uid_Account=${TUPCID}`
+      );
+      setInformation(response.data[0]);
     } catch (err) {
-      console.error(err)
+      console.error(err);
     }
   };
 
@@ -73,7 +75,6 @@ function AdminAside({clicked, setClicked}) {
             <i className="bi bi-journals fs-3 custom-hover"></i>
           </div>
           <div className="d-flex flex-column gap-2">
-            <i className="bi bi-gear fs-3 custom-hover"></i>
             <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
             <i className="bi bi-power fs-3 custom-hover"></i>
           </div>
@@ -114,8 +115,7 @@ function AdminAside({clicked, setClicked}) {
             <Link
               className="text-decoration-none link-dark "
               href={{
-                pathname: "/Admin_Page/Student_Page",
-                query: `UserName=${UserName}`,
+                pathname: "/Admin_Page/Student_Page"
               }}
             >
               {path == "/Admin_Page/Student_Page" ? (
@@ -133,8 +133,7 @@ function AdminAside({clicked, setClicked}) {
             <Link
               className="text-decoration-none link-dark"
               href={{
-                pathname: "/Admin_Page/Faculty_Page",
-                query: `UserName=${UserName}`,
+                pathname: "/Admin_Page/Faculty_Page"
               }}
             >
               {path == "/Admin_Page/Faculty_Page" ? (
@@ -151,14 +150,15 @@ function AdminAside({clicked, setClicked}) {
             </Link>
           </div>
           <div className="d-flex flex-column custom-black-color align-self-start gap-2">
-            <div className="d-flex align-items-center gap-1 custom-hover">
-              <i className="bi bi-gear fs-3"></i>
-              <span className="fs-5">SETTINGS</span>
-            </div>
-            <div className="d-flex align-items-center gap-1 custom-hover">
-              <i className="bi bi-exclamation-triangle fs-3"></i>
-              <span className="fs-5">REPORT PROBLEM</span>
-            </div>
+            <Link
+              href={{ pathname: "/Admin_Page/ReportProblem" }}
+              className="link-dark text-decoration-none"
+            >
+              <div className="d-flex align-items-center gap-1 custom-hover">
+                <i className="bi bi-exclamation-triangle fs-3"></i>
+                <span className="fs-5">REPORT PROBLEM</span>
+              </div>
+            </Link>
             <Link
               href={{ pathname: "/Login" }}
               className="link-dark text-decoration-none"

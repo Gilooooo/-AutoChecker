@@ -8,6 +8,7 @@ function StudentTestList({ clicked, setClicked }) {
   const [testList, setTestList] = useState([]);
   const [uidSection, setUidSection] = useState("");
   const [message, setMessage] = useState("");
+  const [publishedtest, setPublishedTest] = useState([]);
   const [testNameMap, setTestNameMap] = useState({});
   const [studentScores, setStudentScores] = useState([]);
   const [dropdown, setDropdown] = useState(false);
@@ -18,7 +19,7 @@ function StudentTestList({ clicked, setClicked }) {
         `http://localhost:3001/StudentTestList?uidsection=${uidSection}`
       );
       if (response.status === 200) {
-        console.log(response.data);
+        setMessage("");
         try {
           const response1 = await axios.put(
             `http://localhost:3001/StudentTestList?uidStudent=${TUPCID}`,
@@ -43,10 +44,26 @@ function StudentTestList({ clicked, setClicked }) {
       const response = await axios.get(
         `http://localhost:3001/StudentSectionList?uidStudent=${TUPCID}`
       );
-      console.log(response.data)
-      setTestList(response.data.enrolledSections || []);
-      setTestNameMap(response.data.testNameMap || {});
-      setStudentScores(response.data.studentScores || []);
+
+      const enrolledSections = response.data.enrolledSections || [];
+      setTestList(enrolledSections);
+      console.log("data i received:  ", enrolledSections);
+
+      // Create testNameMap based on Uid_Test and TestName from the backend
+      const testNameRows = response.data.testNameMap || [];
+      const map = {};
+      testNameRows.forEach((row) => {
+        map[row.Uid_Test] = row.TestName;
+      });
+
+      console.log("testname row: ", testNameRows);
+      console.log("testnamemap: ", map);
+
+      setTestNameMap(testNameRows);
+
+      const { studentScores } = response.data;
+      console.log("Student Scores for test", studentScores);
+      setStudentScores(studentScores || []);
     } catch (err) {
       console.error(err);
     }
@@ -76,7 +93,7 @@ function StudentTestList({ clicked, setClicked }) {
           <h2 className="m-0 w-100 text-center text-sm-start pe-3">STUDENT</h2>
         </div>
         <div className="d-flex justify-content-end w-100 ">
-          <small onClick={() => console.log(testList)}>Sort by:</small>
+          <small onClick={() => console.log(publishedtest)}>Sort by:</small>
         </div>
         <div className="d-flex justify-content-between w-100 position-relative">
           <div className="d-flex gap-2">
@@ -132,7 +149,7 @@ function StudentTestList({ clicked, setClicked }) {
                       type="button"
                       className="btn btn-primary"
                       data-bs-dismiss={
-                        message === "" || "Code not found!" ? " " : "modal"
+                        message === "Section doesn't exist or wrong uid" ? " " : "modal"
                       }
                       onClick={Join}
                     >
@@ -145,42 +162,85 @@ function StudentTestList({ clicked, setClicked }) {
             {/* End of Modal for Add test */}
           </div>
           <div className="d-sm-flex d-none gap-md-2 gap-1 position-absolute end-0 align-self-end">
-            <button className="btn btn-outline-dark btn-sm">TEST NAME</button>
-            <button className="btn btn-outline-dark btn-sm">SUBJECT</button>
+            <button
+              className="btn btn-outline-dark btn-sm"
+              onClick={() => console.log(testList)}
+            >
+              TEST NAME
+            </button>
+            <button
+              className="btn btn-outline-dark btn-sm"
+              onClick={() => console.log(testNameMap)}
+            >
+              SUBJECT
+            </button>
             <button className="btn btn-outline-dark btn-sm">COURSE</button>
             <button className="btn btn-outline-dark btn-sm">STATUS</button>
           </div>
         </div>
         <div className="row m-0 mt-2 col-12 gap-2">
-          {testList.map((section, index) => (
-            <div
-              className="p-2 px-3 border border-1 border-dark rounded col-12"
-              key={index}
-            >
-              <h5
-                className="fw-light m-0 py-2"
-                onClick={() => setDropdown(dropdown === index ? null : index)}
+          {testList.map((sections, index) => (
+            <div key={index} className="p-0">
+              <h5 className="m-0 border border-dark py-2 text-center rounded mb-1 dropdown-toggle"
+               onClick={() => setDropdown(dropdown === index ? null : index)}
               >
-                {section.Section_Subject} | {section.Section_Uid}
+                {sections.Section_Uid} {sections.Section_Subject}
               </h5>
-              {
-                <div
-                  className={`${
-                    dropdown === index ? "d-block" : "d-none"
-                  } border-top border-bottom py-2 px-3`}
-                >
-                  {Object.values(testNameMap)[index] == null ? (
-                    "No Test Yet"
-                  ) : (
-                    <div>
-                      {Object.values(testNameMap)[index]} |
-                      {studentScores && studentScores.length > index
-                        ? `   GRADED  |    ${studentScores[index].TOTALSCORE} / ${studentScores[index].MAXSCORE}`
-                        : "    PENDING |   Score is not yet available"}
+              <div className={`${dropdown === index ? "d-flex": "d-none"} flex-column gap-2 py-2 px-3`}>
+                {/* Published test */}
+                {testNameMap
+                  .filter((tests) => tests.Section_Uid === sections.Section_Uid)
+                  .map((Tests, idx) => (
+                    <div
+                      className="p-1 px-3 border border-dark rounded col-12"
+                      key={idx}
+                    > <Link
+                          href={{
+                            pathname: "/Student/Result",
+                            query: {
+                              studentid: TUPCID,
+                              uidoftest: Tests.Uid_Test,
+                            },
+                          }}
+                          className="link-dark text-decoration-none"
+                        >
+                      <h5 className="m-0 py-2">
+                        Test Uid: {Tests.Uid_Test} | Test Name:{" "}
+                        {Tests.TestName} |{" "}
+                        {studentScores && studentScores.length > idx
+                          ? `GRADED | ${studentScores[idx].TOTALSCORE} / ${studentScores[idx].MAXSCORE}`
+                          : "PENDING | Score not available"}
+                      </h5>
+                      </Link>
                     </div>
-                  )}
-                </div>
-              }
+                  ))}
+                {/* // Object.keys(test.NameMap).map((uidTest, index) => (
+                  //   <div
+                  //     className="p-1 px-3 border border-dark rounded col-12"
+                  //     key={index}
+                  //   >
+                  //     <Link
+                  //       href={{
+                  //         pathname: "/Student/Result",
+                  //         query: {
+                  //           studentid: TUPCID,
+                  //           uidoftest: uidTest,
+                  //         },
+                  //       }}
+                  //     >
+                  //       <h5 className="fw-light">
+                  //         Test UID: {uidTest} | Test Name: {uidTest.TestName}
+                  //         |
+                  //         {studentScores && studentScores.length > index
+                  //           ? `GRADED | ${studentScores[index].TOTALSCORE} / ${studentScores[index].MAXSCORE}`
+                  //           : "PENDING | Score not available"}
+                  //       </h5>
+                  //     </Link>
+                  //   </div>
+                  // )) */}
+
+                {/* Published test */}
+              </div>
             </div>
           ))}
         </div>

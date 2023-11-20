@@ -11,6 +11,7 @@ const officegen = require("officegen");
 const romanize = require("romanize");
 const PDFDocument = require("pdfkit");
 const app = express();
+const fs = require('fs')
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -54,8 +55,7 @@ const checkExist = async (uidStudent, Uid_Professor, Uid_Section) => {
 
 const checkPublish = async (Uid_Test) => {
   try {
-    const query =
-      "SELECT COUNT(*) as count from publish_test WHERE Uid_Test = ?";
+    const query = "SELECT COUNT(*) as count from publish_test WHERE Uid_Test = ?";
     const [count] = await connection.query(query, [Uid_Test]);
     if (count[0].count === 0) {
       return true;
@@ -505,15 +505,8 @@ app.get("/TestListSectionName", async (req, res) => {
 });
 
 app.post("/TestList", async (req, res) => {
-  const {
-    TestName,
-    Subject,
-    UidTest,
-    UidProf,
-    SectionName,
-    Semester,
-    Uid_section,
-  } = req.body;
+  const { TestName, Subject, UidTest, UidProf, SectionName, Semester, Uid_section } =
+    req.body;
   try {
     const infos = await getInfoProf(UidProf);
     const query1 =
@@ -570,16 +563,15 @@ app.post("/CheckPublish", async (req, res) => {
   try {
     const existingItems = [];
     for (let i = 0; i < Uids.length; i++) {
-      const query =
-        "SELECT COUNT(*) as count FROM publish_test WHERE Uid_Test = ?";
+      const query = "SELECT COUNT(*) as count FROM publish_test WHERE Uid_Test = ?"
       const [row] = await connection.query(query, [Uids[i]]);
-      if (row[0].count === 1) {
-        existingItems.push(Uids[i]);
+      if(row[0].count === 1){
+        existingItems.push(Uids[i])
       }
     }
     return res.status(200).json({ existingItems });
   } catch (err) {
-    throw err;
+    throw err
   }
 });
 
@@ -588,7 +580,7 @@ app.delete("/TestList", async (req, res) => {
   try {
     const query1 = "DELETE FROM publish_test WHERE Uid_Test = ?";
     const query = "DELETE FROM faculty_testlist WHERE Uid_Test = ?";
-    await connection.query(query1, [UidTest]);
+    await connection.query(query1,[UidTest])
     await connection.query(query, [UidTest]);
     return res.status(200).send({ message: "Done" });
   } catch (err) {
@@ -598,27 +590,17 @@ app.delete("/TestList", async (req, res) => {
 
 app.post("/PublishTest", async (req, res) => {
   const { Uid_Prof } = req.query;
-  const { TestName, UidTest, Subject, SectionName, Semester, SectionUid } =
-    req.body;
+  const { TestName, UidTest, Subject, SectionName, Semester, SectionUid} = req.body;
   const TupcId = await getInfoProf(Uid_Prof);
   try {
     const checking = await checkPublish(UidTest);
     if (checking) {
       const query =
         "INSERT INTO publish_test (Professor_ID, Uid_Professor, Section_Uid, Uid_Test, Subject, Section_Name, Semester, TestName) values (?, ?, ?, ?, ?, ?, ? ,?)";
-      await connection.query(query, [
-        TupcId[0].TUPCID,
-        Uid_Prof,
-        SectionUid,
-        UidTest,
-        Subject,
-        SectionName,
-        Semester,
-        TestName,
-      ]);
+      await connection.query(query, [TupcId[0].TUPCID, Uid_Prof, SectionUid, UidTest, Subject, SectionName, Semester, TestName])
       return res.status(200).send({ message: "Done" });
-    } else {
-      return res.status(409).send({ message: "Already publish" });
+    }else{
+      return res.status(409).send({ message: "Already publish"})
     }
   } catch (err) {
     throw err;
@@ -750,65 +732,48 @@ app.put("/StudentTestList", async (req, res) => {
 app.get("/StudentSectionList", async (req, res) => {
   const { uidStudent } = req.query;
   try {
+ 
     const queryTUPCID = "SELECT TUPCID FROM student_accounts WHERE uid = ?";
     const [accountRow] = await connection.query(queryTUPCID, [uidStudent]);
-    const TUPCID = accountRow[0]?.TUPCID;
+    const TUPCID = accountRow[0]?.TUPCID; 
 
     if (!TUPCID) {
-      return res
-        .status(404)
-        .send({ message: "No TUPCID found for the provided uid" });
+      return res.status(404).send({ message: "No TUPCID found for the provided uid" });
     }
 
-    const queryEnrolledSections =
-      "SELECT * FROM enrolled_sections WHERE Student_Uid = ?";
+    const queryEnrolledSections = "SELECT * FROM enrolled_sections WHERE Student_Uid = ?";
     const [row] = await connection.query(queryEnrolledSections, [uidStudent]);
-
+    
     if (row.length === 0) {
-      return res
-        .status(404)
-        .send({ message: "No enrolled sections found for the student" });
+      return res.status(404).send({ message: "No enrolled sections found for the student" });
     }
 
     const uidSections = row.map((section) => section.Section_Uid);
-    const subjects = row.map((subject) => subject.Section_Subject);
-    const examUIDQuery =
-      "SELECT * FROM publish_test WHERE Section_Uid IN (?) AND Subject IN (?)";
-    const [examRows] = await connection.query(examUIDQuery, [
-      uidSections,
-      subjects,
-    ]);
+    const subjectsections = row.map((subject) => subject.Section_Subject);
+    console.log(subjectsections);
+    const examUIDQuery = "SELECT * FROM publish_test WHERE Section_Uid IN (?) AND Subject IN (?)";
+    const [examRows] = await connection.query(examUIDQuery, [uidSections, subjectsections]);
+
+      console.log(examRows)
     if (examRows.length === 0) {
-      return res.status(404).send({
-        message: "No published tests found for the enrolled sections",
-      });
+      return res.status(404).send({ message: "No published tests found for the enrolled sections" });
     }
     const examUIDs = examRows.map((exam) => exam.Uid_Test);
-
-    const scoreQuery =
-      "SELECT TOTALSCORE, MAXSCORE FROM student_results WHERE TUPCID = ? AND UID IN (?)";
+    const scoreQuery = "SELECT TOTALSCORE, MAXSCORE FROM student_results WHERE TUPCID = ? AND UID IN (?)";
     const [scoreRows] = await connection.query(scoreQuery, [TUPCID, examUIDs]);
 
-    const testNameQuery =
-      "SELECT Uid_Test, TestName FROM faculty_testlist WHERE Uid_Test IN (?)";
-    const [testNameRows] = await connection.query(testNameQuery, [examUIDs]);
-
-    const testNameMap = testNameRows.reduce((acc, row) => {
-      acc[row.Uid_Test] = row.TestName;
-      return acc;
-    }, {});
-
+    
     const combinedData = {
       enrolledSections: row,
       examUIDs: examUIDs,
-      examData: examRows,
       studentScores: scoreRows,
-      testNameMap: testNameMap,
+      testNameMap: examRows, 
     };
     return res.status(200).send(combinedData);
+    
   } catch (err) {
     console.error(err);
-    throw err;
+    return res.status(500).send({ message: "Problem at the server" });
   }
 });
 
@@ -1290,6 +1255,8 @@ app.get("/getquestionstypeandnumber/:TUPCID/:uid", async (req, res) => {
       WHERE Professor_ID = ? AND UID_test = ?;
     `;
 
+    console.log("tupcid: ", TUPCID)
+    console.log("uid: ", uid)
     // Execute the query with the provided parameters
     const [testdata] = await connection.query(query, [TUPCID, uid]);
 
@@ -1701,10 +1668,11 @@ app.get("/generateAnswerSheet/:uid/:sectionname/", async (req, res) => {
   }
 });
 
-app.get("/getquestionstypeandnumberandanswer/:uid", async (req, res) => {
-  const { uid } = req.params;
+app.get('/getquestionstypeandnumberandanswer/:uid', async (req, res) => {
+  const {  uid } = req.params;
 
   console.log("uid:", uid);
+  
 
   try {
     // Construct the SQL query to retrieve the questions data
@@ -1715,7 +1683,7 @@ app.get("/getquestionstypeandnumberandanswer/:uid", async (req, res) => {
     `;
 
     // Execute the query with the provided parameters
-    const [testdata] = await connection.query(query, [uid]);
+    const [testdata] = await connection.query(query, [ uid]);
 
     if (testdata.length >= 1) {
       console.log("Found test data for UID:", uid);
@@ -1724,21 +1692,16 @@ app.get("/getquestionstypeandnumberandanswer/:uid", async (req, res) => {
       const questionsData = testdata[0].questions;
 
       // Extract questionNumber, questionType, and answer from questionsData
-      const questionNumbers = questionsData.map(
-        (question) => question.questionNumber
-      );
-      const questionTypes = questionsData.map(
-        (question) => question.questionType
-      );
+      const questionNumbers = questionsData.map((question) => question.questionNumber);
+      const questionTypes = questionsData.map((question) => question.questionType);
       const answers = questionsData.map((question) => question.answer);
       const score = questionsData.map((question) => question.score);
       const totalscore = questionsData.map((question) => question.TotalScore);
 
-      const totalScoreValue = totalscore
-        .filter((score) => typeof score === "number")
-        .pop();
+      const totalScoreValue = totalscore.filter(score => typeof score === 'number').pop();
 
-      console.log("Total Score:", totalScoreValue);
+
+      
 
       // Construct the response object with questionNumber, questionType, and answers
       const responseData = {
@@ -1746,21 +1709,23 @@ app.get("/getquestionstypeandnumberandanswer/:uid", async (req, res) => {
         questionTypes,
         answers,
         score,
-        totalScoreValue,
+        totalScoreValue
       };
 
+    
       res.status(200).json(responseData);
     } else {
       console.log("Test data not found for UID:", uid);
-      res.status(404).json({ error: "test data not found" });
+      res.status(404).json({ error: 'test data not found' });
     }
   } catch (error) {
-    console.error("Error retrieving test data:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('Error retrieving test data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-app.post("/results", async (req, res) => {
+
+app.post('/results', async (req, res) => {
   try {
     const { TUPCID, UID, questionType, answers } = req.body;
 
@@ -1774,25 +1739,81 @@ app.post("/results", async (req, res) => {
     const values = [
       TUPCID || null,
       UID || null,
-      JSON.stringify(questionType),
-      JSON.stringify(answers),
+      JSON.stringify(questionType), 
+      JSON.stringify(answers),      
     ];
 
     await connection.query(query, values);
 
     // Respond with a success message
-    res
-      .status(200)
-      .json({ message: "Data added to the database successfully" });
+    res.status(200).json({ message: 'Data added to the database successfully' });
   } catch (error) {
-    console.error("Error adding data to the database:", error);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", message: error.message });
+    console.error('Error adding data to the database:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: error.message });
   }
 });
 
-app.get("/getstudentanswers/:studentid/:uid", async (req, res) => {
+app.get('/resultsexist/:UID', async (req, res) => {
+  try {
+    const {  UID } = req.params;
+
+    console.log("uid", UID)
+    // Check if the TUPCID and UID exist in the results table
+    const query = `
+      SELECT TUPCID, UID FROM results WHERE UID = ?
+    `;
+
+    const values = [
+      UID || null,
+    ];
+
+    const result = await connection.query(query, values);
+
+    if (result.length > 0) {
+      console.log("TUPCID CHECKS: ", result)
+      res.status(200).json({ message: 'TUPCID and UID exist in the database' });
+
+    } else {
+     
+      res.status(404).json({ message: 'TUPCID and UID not found in the database' });
+
+ 
+    }
+  } catch (error) {
+    console.error('Error checking data in the database:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+  }
+});
+
+app.put('/updateresults/:TUPCID', async (req, res) => {
+  try {
+    const {TUPCID} = req.params;
+    const {  questionType, answers } = req.body;
+    console.log("ID:" , TUPCID)
+    // Update the record in the database based on TUPCID
+    const updateQuery = `
+      UPDATE results
+      SET questionType = ?, answers = ?, results_takendate = CURRENT_TIMESTAMP
+      WHERE TUPCID = ?
+    `;
+    console.log("tupcid check:", TUPCID)
+    const values = [
+      JSON.stringify(questionType) || null,
+      JSON.stringify(answers) || null,
+      TUPCID || null,
+    ];
+
+    await connection.query(updateQuery, values);
+
+    // Respond with a success message
+    res.status(200).json({ message: 'Data updated in the database successfully' });
+  } catch (error) {
+    console.error('Error updating data in the database:', error);
+    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+  }
+});
+
+app.get('/getstudentanswers/:studentid/:uid', async (req, res) => {
   const { studentid, uid } = req.params;
 
   try {
@@ -1811,41 +1832,40 @@ app.get("/getstudentanswers/:studentid/:uid", async (req, res) => {
       console.log("Found student answer data for TUPCID:", studentid);
 
       // Extract student answers data from the response
-      const studentAnswers = studentAnswerData[0].answers;
+      const studentAnswers = studentAnswerData[0].answers; 
 
-      const questionNumbers = studentAnswers.map(
-        (answer) => answer.questionNumber
-      );
-      const questionTypes = studentAnswers.map((answer) => answer.type);
+      const questionNumbers = studentAnswers.map((answer) => answer.questionNumber);
+      const questionTypes = studentAnswers.map((answer) => answer.questionType);
       const answers = studentAnswers.map((answer) => answer.answer);
 
       // Construct the response object with student answers
-      const responseData = {
-        questionNumbers,
-        questionTypes,
-        answers,
+      const responseData = {  
+        questionNumbers,questionTypes, answers
       };
-      console.log("check response:", responseData);
+      console.log("check response:", responseData)
       res.status(200).json(responseData);
     } else {
       console.log("Student answer data not found for UID:", uid);
-      res.status(404).json({ error: "student answer data not found" });
+      res.status(404).json({ error: 'student answer data not found' });
     }
   } catch (error) {
-    console.error("Error retrieving student answer data:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('Error retrieving student answer data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 app.get("/Studentname/:TUPCID", async (req, res) => {
   const { TUPCID } = req.params;
   try {
-    const query =
-      "SELECT FIRSTNAME, MIDDLENAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
+    const query = "SELECT FIRSTNAME, MIDDLENAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
     const [studentData] = await connection.query(query, [TUPCID]);
 
     if (studentData.length > 0) {
-      const { FIRSTNAME, SURNAME, MIDDLENAME } = studentData[0];
+      const {
+        FIRSTNAME,
+        SURNAME,
+        MIDDLENAME
+      } = studentData[0];
 
       return res.status(202).send({
         TUPCID,
@@ -1861,7 +1881,9 @@ app.get("/Studentname/:TUPCID", async (req, res) => {
   }
 });
 
-app.put("/updatestudentanswers/:studentid/:uid", async (req, res) => {
+
+
+app.put('/updatestudentanswers/:studentid/:uid', async (req, res) => {
   const { studentid, uid } = req.params;
 
   try {
@@ -1882,116 +1904,97 @@ app.put("/updatestudentanswers/:studentid/:uid", async (req, res) => {
     const [testpaper] = await connection.query(testpaperQuery, [uid]);
 
     if (result.length >= 1 && testpaper.length >= 1) {
-      7;
-      const studentAnswers = result[0].answers;
+      const studentAnswers = result[0].answers; 
       const testpaperQuestions = testpaper[0].questions;
 
-      const updatedAnswers = studentAnswers.map((answer) => {
-        const matchingQuestion = testpaperQuestions.find(
-          (question) =>
-            question.questionNumber === answer.questionNumber &&
-            question.type === answer.type
-        );
 
-        console.log("typeANSWER", answer.type);
-        console.log("type", matchingQuestion.type);
+
+      const updatedAnswers = studentAnswers.map(answer => {
+        const matchingQuestion = testpaperQuestions.find(question => (question.questionNumber === answer.questionNumber) && (question.type === answer.type));
+
+    
+        console.log("typeANSWER", answer.type)
+        console.log("type", matchingQuestion.type)
+
 
         if (matchingQuestion && matchingQuestion.answer === answer.answer) {
-          answer.score = matchingQuestion.score;
+          answer.score = matchingQuestion.score; 
         } else {
-          answer.score = 0;
+          answer.score = 0; 
         }
-
+      
         return answer;
       });
+
+      
 
       const updateQuery = `
         UPDATE results
         SET answers = ?
         WHERE TUPCID = ? AND UID = ?;
       `;
-      await connection.query(updateQuery, [
-        JSON.stringify(updatedAnswers),
-        studentid,
-        uid,
-      ]);
+      await connection.query(updateQuery, [JSON.stringify(updatedAnswers), studentid, uid]);
 
       res.status(200).json({ updatedAnswers });
     } else {
-      res
-        .status(404)
-        .json({ error: "Student answer data or testpaper not found" });
+      res.status(404).json({ error: 'Student answer data or testpaper not found' });
     }
   } catch (error) {
-    console.error("Error updating student answers:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('Error updating student answers:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-app.post("/sendanswertoresult", async (req, res) => {
-  const { TUPCID, UID, results, totalscore2, maxscore } = req.body;
+
+
+
+app.post('/sendanswertoresult', async (req, res) => {
+  const { TUPCID, UID, results, correct, wrong, totalscore2, maxscore } = req.body;
 
   try {
     // Construct the SQL query to retrieve the student answers data
     const query = `
     INSERT INTO student_results
-    (TUPCID, UID, results, TOTALSCORE, MAXSCORE, results_out) 
-      VALUES (?, ?, ?, ?,?, NOW())
+    (TUPCID, UID, results, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out) 
+      VALUES (?, ?, ?, ?,?,?,?, NOW())
   `;
 
-    const values = [
-      TUPCID || null,
-      UID || null,
-      JSON.stringify(results),
-      totalscore2,
-      maxscore,
-    ];
+  const values = [
+    TUPCID || null,
+    UID || null,
+    JSON.stringify(results), 
+    correct,
+    wrong,
+    totalscore2,      
+    maxscore
+  ];
 
-    await connection.query(query, values);
+  await connection.query(query, values);
 
-    // Respond with a success message
-    res
-      .status(200)
-      .json({ message: "Data added to the database successfully" });
-  } catch (error) {
-    console.error("Error adding data to the database:", error);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", message: error.message });
-  }
+  // Respond with a success message
+  res.status(200).json({ message: 'Data added to the database successfully' });
+} catch (error) {
+  console.error('Error adding data to the database:', error);
+  res.status(500).json({ error: 'Internal Server Error', message: error.message });
+}
 });
 
 app.get("/Studentscores/:uid", async (req, res) => {
   const { uid } = req.params;
+  console.log("Received UID:", uid); // Log UID to check if it's received correctly
 
   try {
-    const query =
-      "SELECT TUPCID, results, TOTALSCORE FROM student_results WHERE UID = ?";
+    const query = "SELECT TUPCID, TOTALSCORE, MAXSCORE, CORRECT, WRONG FROM student_results WHERE UID = ?";
     const [studentScores] = await connection.query(query, [uid]);
 
     if (studentScores.length > 0) {
       const studentlist = [];
 
       for (const result of studentScores) {
-        const { TUPCID, results, TOTALSCORE } = result;
-        const parsedResults = results;
+        const { TUPCID, TOTALSCORE, MAXSCORE, CORRECT, WRONG } = result;
 
-        let correct = 0;
-        let wrong = 0;
-
-        for (const res of parsedResults) {
-          if (res.score === 0) {
-            wrong++;
-          } else {
-            correct++;
-          }
-        }
-
-        const studentDataQuery =
-          "SELECT FIRSTNAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
-        const [studentData] = await connection.query(studentDataQuery, [
-          TUPCID,
-        ]);
+        const studentDataQuery = "SELECT FIRSTNAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
+        const [studentData] = await connection.query(studentDataQuery, [TUPCID]);
 
         if (studentData.length > 0) {
           const { FIRSTNAME, SURNAME } = studentData[0];
@@ -2000,8 +2003,9 @@ app.get("/Studentscores/:uid", async (req, res) => {
             FIRSTNAME,
             SURNAME,
             TOTALSCORE,
-            correct,
-            wrong,
+            CORRECT,
+            WRONG,
+            MAXSCORE
           });
         }
       }
@@ -2018,6 +2022,178 @@ app.get("/Studentscores/:uid", async (req, res) => {
     return res.status(500).send({ message: "Failed to fetch student scores" });
   }
 });
+
+
+app.get("/Studentname2/:studentid", async (req, res) => {
+  const { studentid } = req.params;
+  try {
+    const query = "SELECT TUPCID FROM student_accounts WHERE uid = ?";
+    const [studentData] = await connection.query(query, [studentid]);
+
+    if (studentData.length > 0) {
+      const {
+        TUPCID
+      } = studentData[0];
+
+      return res.status(202).send({
+        TUPCID,
+      });
+    } else {
+      return res.status(404).send({ message: "Student not found" });
+    }
+  } catch (error) {
+    return res.status(500).send({ message: "Failed to fetch student data" });
+  }
+});
+
+
+app.get("/myresult/:TUPCID/:uid", async (req, res) => {
+  const { TUPCID, uid } = req.params;
+
+  try {
+    const query =
+      "SELECT results, CORRECT, WRONG, TOTALSCORE, MAXSCORE FROM student_results WHERE UID = ? AND TUPCID = ?";
+    const [studentScores] = await connection.query(query, [uid , TUPCID]);
+
+    if (studentScores.length > 0) {
+      const resultlist = [];
+
+      for (const result of studentScores) {
+        const { results, CORRECT, WRONG, TOTALSCORE, MAXSCORE } = result;
+
+        resultlist.push({ results, CORRECT, WRONG, TOTALSCORE, MAXSCORE });
+      }
+
+      console.log("studentlist:", resultlist);
+
+      return res.status(200).send({ resultlist });
+    } else {
+      return res.status(404).send({ message: "Student scores not found" });
+    }
+  } catch (error) {
+    console.error("Failed to fetch student scores:", error);
+    return res
+      .status(500)
+      .send({ message: "Failed to fetch student scores", error });
+  }
+});
+
+    
+
+
+app.get('/printstudentrecord/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    // Fetch student scores data
+    const query = "SELECT TUPCID,CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out FROM student_results WHERE UID = ?";
+    const [studentScores] = await connection.query(query, [uid]);
+
+    if (studentScores.length > 0) {
+      const studentlist = [];
+
+      for (const result of studentScores) {
+        const { TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out} = result;
+    
+
+
+        const studentDataQuery = "SELECT FIRSTNAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
+        const [studentData] = await connection.query(studentDataQuery, [TUPCID]);
+
+        if (studentData.length > 0) {
+          const { FIRSTNAME, SURNAME } = studentData[0];
+          studentlist.push({
+            TUPCID,
+            FIRSTNAME,
+            SURNAME,
+            TOTALSCORE,
+            CORRECT,
+            WRONG,
+            MAXSCORE,
+            results_out
+          });
+        }
+      }
+
+      // Generate Excel content using studentlist data
+      let xlsx = officegen('xlsx');
+      let sheet = xlsx.makeNewSheet();
+      sheet.name = 'Student Records';
+
+      // Add headers to the sheet:
+      sheet.setCell('A1', 'TUPCID');
+      sheet.setCell('B1', 'FIRSTNAME');
+      sheet.setCell('C1', 'SURNAME');
+      sheet.setCell('D1', 'TOTALSCORE');
+      sheet.setCell('E1', 'Correct');
+      sheet.setCell('F1', 'Wrong');
+      sheet.setCell('G1', 'MAXSCORE');
+      sheet.setCell('H1', 'RESULTS TAKEN');
+
+      // Add data to the sheet based on fetched records:
+      studentlist.forEach((record, index) => {
+        const rowIndex = index + 2; // Start from row 2 to avoid headers
+        sheet.setCell(`A${rowIndex}`, record.TUPCID);
+        sheet.setCell(`B${rowIndex}`, record.FIRSTNAME);
+        sheet.setCell(`C${rowIndex}`, record.SURNAME);
+        sheet.setCell(`D${rowIndex}`, record.TOTALSCORE);
+        sheet.setCell(`E${rowIndex}`, record.CORRECT);
+        sheet.setCell(`F${rowIndex}`, record.WRONG);
+        sheet.setCell(`G${rowIndex}`, record.MAXSCORE);
+        const date = new Date(record.results_out); // Assuming `results_out` is a string in the format '2023-11-19 21:55:04'
+  
+        // Format the date in a readable format (e.g., YYYY-MM-DD HH:MM:SS)
+        const formattedDate = date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      
+        sheet.setCell(`H${rowIndex}`, formattedDate);
+      });
+
+      // Set headers for response
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="example.xlsx"');
+
+      // Pipe the generated Excel file directly to the response stream
+      xlsx.generate(res);
+
+      console.log('Excel file generation initiated for UID:', uid);
+    } else {
+      return res.status(404).send({ message: "Student scores not found" });
+    }
+  } catch (error) {
+    console.error('Error while generating Excel file:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.put('/updateTotalScore/:TUPCID', async (req, res) => {
+  try {
+    const { TUPCID } = req.params;
+    const { CORRECT, WRONG, TOTALSCORE } = req.body; // Get the updated values for correct and wrong answers
+
+    console.log("Received TUPCID:", TUPCID);
+    console.log("Received correct:", CORRECT);
+    console.log("Received wrong:", WRONG);
+    console.log("Received TOTAL:", TOTALSCORE);
+
+    // Update CORRECT and WRONG in the database for the given TUPCID
+    const updateScoreQuery = 'UPDATE student_results SET CORRECT = ?, WRONG = ?, TOTALSCORE = ? WHERE TUPCID = ?';
+    await connection.query(updateScoreQuery, [CORRECT, WRONG, TOTALSCORE, TUPCID]);
+
+    // Send success response
+    res.status(200).send('CORRECT and WRONG updated successfully');
+  } catch (error) {
+    console.error('Error updating CORRECT and WRONG:', error);
+    res.status(500).send('Error updating CORRECT and WRONG');
+  }
+});
+
 
 // Start the server
 app.listen(3001, () => {
