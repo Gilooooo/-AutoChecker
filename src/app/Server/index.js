@@ -11,7 +11,7 @@ const officegen = require("officegen");
 const romanize = require("romanize");
 const PDFDocument = require("pdfkit");
 const app = express();
-const fs = require('fs')
+
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -215,7 +215,7 @@ app.post("/StudentRegister", async (req, res) => {
     const uidTUPCID = await bcryptjs.hash(TUPCID, 2);
 
     const insertQuery =
-      "INSERT INTO student_accounts (uid, TUPCID, SURNAME, FIRSTNAME, MIDDLENAME, GSFEACC, COURSE, SECTION, YEAR, STATUS, PASSWORD) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      "INSERT INTO student_accounts (uid, TUPCID, SURNAME, FIRSTNAME, MIDDLENAME, GSFEACC, COURSE, SECTION, YEAR, STATUS, PASSWORD, REGISTEREDDATE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
     await connection.query(insertQuery, [
       uidTUPCID,
@@ -262,7 +262,7 @@ app.post("/FacultyRegister", async (req, res) => {
     const uidTUPCID = await bcryptjs.hash(TUPCID, 2);
 
     const insertQuery =
-      "INSERT INTO faculty_accounts (uid, TUPCID, SURNAME, FIRSTNAME, MIDDLENAME, GSFEACC, SUBJECTDEPT, PASSWORD) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+      "INSERT INTO faculty_accounts (uid, TUPCID, SURNAME, FIRSTNAME, MIDDLENAME, GSFEACC, SUBJECTDEPT, PASSWORD, REGISTEREDDATE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
     await connection.query(insertQuery, [
       uidTUPCID,
@@ -511,23 +511,7 @@ app.post("/TestList", async (req, res) => {
     const infos = await getInfoProf(UidProf);
     const query1 =
       "INSERT INTO faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Section, Uid_Test, Uid_Professor, date_created) values (?, ?, ? ,? ,?, ?, ?, ?, ?, ?, ?, ?, NOW())";
-    const query2 =
-      "INSERT INTO preset_faculty_testlist (Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, Professor_ID, TestName, Subject, Section_Name, Semester, Uid_Section, Uid_Test, Uid_Professor, date_created) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     await connection.query(query1, [
-      infos[0].FIRSTNAME,
-      infos[0].MIDDLENAME,
-      infos[0].SURNAME,
-      infos[0].SUBJECTDEPT,
-      infos[0].TUPCID,
-      TestName,
-      Subject,
-      SectionName,
-      Semester,
-      Uid_section,
-      UidTest,
-      UidProf,
-    ]);
-    await connection.query(query2, [
       infos[0].FIRSTNAME,
       infos[0].MIDDLENAME,
       infos[0].SURNAME,
@@ -606,18 +590,7 @@ app.post("/PublishTest", async (req, res) => {
     throw err;
   }
 });
-//Preset
-app.get("/Preset", async (req, res) => {
-  const { UidProf } = req.query;
-  try {
-    const query =
-      "SELECT * FROM preset_faculty_testlist WHERE Uid_Professor = ?";
-    const [row] = await connection.query(query, [UidProf]);
-    return res.status(200).json(row);
-  } catch (err) {
-    return res.status(500).send({ message: "Internal server error" });
-  }
-});
+
 
 //Faculty section
 app.put("/Faculty_sections", async (req, res) => {
@@ -777,6 +750,8 @@ app.get("/StudentSectionList", async (req, res) => {
   }
 });
 
+
+
 //Settings
 //DEMO
 app.get("/facultyinfos/:TUPCID", async (req, res) => {
@@ -901,13 +876,13 @@ app.put("/updatestudentinfos/:TUPCID", async (req, res) => {
 
 app.post("/createtestpaper", async (req, res) => {
   try {
-    const { TUPCID, UID, test_name, section_name, semester, data } = req.body;
+    const { TUPCID, UID, test_name, section_name, subject, semester,data } = req.body;
     console.log("Check receiving data....", TUPCID);
 
     const query = `
       INSERT INTO testpapers 
-      (Professor_ID, UID_test, test_name, section_name, semester, questions, test_created) 
-      VALUES (?, ?, ?, ?, ?,?, NOW())
+      (Professor_ID, UID_test, test_name, section_name, subject, semester, questions, test_created) 
+      VALUES (?, ?, ?, ?, ?,?,?, NOW())
     `;
 
     const values = [
@@ -915,6 +890,7 @@ app.post("/createtestpaper", async (req, res) => {
       UID,
       test_name,
       section_name,
+      subject,
       semester,
       JSON.stringify(data),
     ];
@@ -955,37 +931,68 @@ app.put("/updatetestpaper/:TUPCID/:uid/:section_name", async (req, res) => {
   }
 });
 
+
 app.get("/generateTestPaperpdf/:uid", async (req, res) => {
   try {
     const { uid } = req.params;
 
     const query = `
-      SELECT questions, semester, test_name FROM testpapers WHERE UID_test = ?;
+      SELECT questions, semester, subject ,test_name FROM testpapers WHERE UID_test = ?;
     `;
+
+
     console.log("response....", uid);
 
     const [testdata] = await connection.query(query, [uid]);
+    
     console.log("response....", testdata);
 
     const questionsData = testdata[0].questions;
     const test_name = testdata[0].test_name;
     const semester = testdata[0].semester;
+    const subject = testdata[0].subject;
 
     // Create a new PDF document
-    const doc = new PDFDocument();
+    const doc = new PDFDocument({
+      layout: 'portrait',
+      margins: {
+        top: 50,
+        bottom: 50,
+        left: 72,
+        right: 72,
+      },
+    });
     const filename = ` ${test_name}.pdf`;
 
     // Set the title based on TEST NUMBER and TEST NAME
-    const title = doc.text(`${semester} ${test_name} UID:${uid}`, {
+    const title = doc.text(`${semester}: ${subject}  ${test_name}                                           UID:${uid}`, {
       bold: true,
-      underline: true,
       fontSize: 24,
-      align: "center",
+      align: "left",
     });
     doc.moveDown();
-    doc.text(`Follow the directions and STRICTLY NO ERASURE.`);
+    const boxX = 65; 
+    const boxY = 80; 
+    const boxWidth = 500; 
+    const boxHeight = 100; 
+    
+    // Draw a rectangle
+    doc.rect(boxX, boxY, boxWidth, boxHeight).stroke();
+    
+    // Text to be placed inside the box
+    const directionsText = `    GENERAL DIRECTIONS:
+    1. STRICTLY NO ERASURE
+    2. PUT YOUR ANSWER INSIDE THE CORRESPONDING BOXES
+    3. ANSWER IN ORDER`;
+    
+
+    doc.text(directionsText, boxX + 50, boxY + 10, {
+      width: boxWidth - 20, 
+      lineGap: 10, 
+      fontSize: 12,
+    });
     doc.moveDown();
-    // Create an object to store questions grouped by questionType
+
     const groupedQuestions = {};
 
     // Group questions by questionType
@@ -1032,14 +1039,16 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
 
         const score = questionsOfType[0].score;
         doc.moveDown();
-        const questionTypeHeading = doc.text(
-          `TEST ${romanNumeral}. ${displayText} (${score} pts. each)`,
-          {
-            bold: true,
-            fontSize: 16,
-            color: "black",
-          }
-        );
+        const ptsText = score > 1 ? "pts. each" : score === 1 ? "pt." : "";
+const questionTypeHeading = doc.text(
+  `TEST ${romanNumeral}. ${displayText} (${score} ${ptsText} each)`,
+  {
+    bold: true,
+    fontSize: 16,
+    color: "black",
+  }
+);
+
 
         // Add the instructions
         const instructionParagraph = doc.text(instructions, {
@@ -1052,8 +1061,8 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
 
         questionsOfType.forEach((questionData, index) => {
           // Check if a new column should be started
-          if (index > 0 && index % 10 === 0) {
-            questionTypeHeading.addPage(); // Start a new page
+          if (index > 0 && index % 20 === 0) {
+            questionTypeHeading.addPage(); 
           }
 
           const questionParagraph = doc.text(
@@ -1078,16 +1087,15 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
             doc.moveDown();
           }
 
-          questionNumber++; // Increment question number
+          questionNumber++;
           doc.moveDown();
         });
 
         testCounter++;
-        doc.moveDown(); // Increment testCounter for the next type
+        doc.moveDown(); 
       }
     }
 
-    // Pipe the PDF to the response stream
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     doc.pipe(res);
@@ -1106,7 +1114,7 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
 
     // Fetch data from the database based on the parameters
     const query = `
-      SELECT questions, test_name, semester FROM testpapers WHERE UID_test = ?;
+      SELECT questions, test_name, subject, semester FROM testpapers WHERE UID_test = ?;
     `;
 
     const [testdata] = await connection.query(query, [uid]);
@@ -1115,6 +1123,7 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
     const questionsData = testdata[0].questions;
     const test_name = testdata[0].test_name;
     const semester = testdata[0].semester;
+    const subject = testdata[0].subject;
 
     // Create a new Word document
     const docx = officegen("docx");
@@ -1126,14 +1135,20 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
       paragraph.addText(text, style);
     }
 
-    const title = `${semester}  ${test_name} UID: ${uid}`;
+    const title = `${semester}:  ${subject}  ${test_name}                                  UID: ${uid}`;
     docx.createP().addText(title, {
       bold: true,
       fontSize: 16,
       color: "black",
     });
 
-    // Create an object to store questions grouped by questionType
+    addStyledParagraph('GENERAL DIRECTIONS:', { bold: true });
+addStyledParagraph('1. STRICTLY NO ERASURE', { bold: true });
+addStyledParagraph('2. PUT YOUR ANSWER INSIDE THE CORRESPONDING BOXES', { bold: true });
+addStyledParagraph('3. ANSWER IN ORDER', { bold: true });
+
+
+    docx.createP().addText('')
     const groupedQuestions = {};
 
     // Group questions by questionType
@@ -1202,9 +1217,8 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
         let questionNumber = 1; // Initialize question number
 
         questionsOfType.forEach((questionData, index) => {
-          if (index > 0 && index % 10 === 0) {
-            // Start a new page
-            docx.createP().pageBreak();
+          if (index > 0 && index % 20 === 0) {
+            docx.createP().addText('\f');
           }
 
           addStyledParagraph(`${questionNumber}. ${questionData.question}`, {
@@ -1291,7 +1305,7 @@ app.get("/getquestionstypeandnumber/:TUPCID/:uid", async (req, res) => {
   }
 });
 
-app.get("/generateAnswerSheet/:uid/:sectionname/", async (req, res) => {
+app.get("/generateAnswerSheet/:uid/:sectionname", async (req, res) => {
   try {
     const { uid, sectionname } = req.params; // Extract parameters from the URL
 
@@ -1299,26 +1313,25 @@ app.get("/generateAnswerSheet/:uid/:sectionname/", async (req, res) => {
     console.log("sectionname:", sectionname);
     // Fetch data from the database based on the parameters
     const query = `
-      SELECT questions, test_name
-      FROM testpapers
-      WHERE UID_test = ?;
-    `;
-
-    const query2 = `
-      SELECT e.Student_TUPCID, s.FIRSTNAME, s.MIDDLENAME, s.SURNAME
-      FROM enrolled_sections e
-      INNER JOIN student_accounts s ON e.Student_TUPCID = s.TUPCID
-      WHERE e.section_name = ?;
-    `;
-
-    const query3 = `SELECT ;
+    SELECT questions, test_name
+FROM testpapers
+WHERE TRIM(UID_test) = ?;
   `;
 
-    // Execute the first query to fetch data from 'testforstudents'
-    const [testData] = await connection.query(query, [uid]);
+    const query2 = `
+    SELECT e.Student_TUPCID, s.FIRSTNAME, s.MIDDLENAME, s.SURNAME
+    FROM enrolled_sections e
+    INNER JOIN student_accounts s ON e.Student_TUPCID = s.TUPCID
+    WHERE e.section_name = ?;
+    `;
+
+   
+    const [testData] = await connection.query(query, [uid.trim()]);
+    console.log('Test data:', testData);
 
     // Execute the second query to fetch data from 'enrollments' and 'student_accounts'
-    const [studentData] = await connection.query(query2, [sectionname]);
+    const [studentData] = await connection.query(query2,[sectionname]);
+    console.log("students: ", studentData);
 
     const test_name = testData[0].test_name;
 
@@ -1344,11 +1357,11 @@ app.get("/generateAnswerSheet/:uid/:sectionname/", async (req, res) => {
     doc.fontSize(10);
 
     const boxStrokeColor = "#818582";
-
-    // Iterate through studentData and add each student's information and answer sheet
-    for (const student of studentData) {
-      // Extract student information
-      const { Student_TUPCID, FIRSTNAME, SURNAME } = student;
+    
+    if (studentData.length < 1) {
+      const TUPCIDSTUDENT = "TUPC-XX-XXXX";
+      const FIRSTNAME = "FIRSTNAME";
+      const SURNAME = "SURNAME"
 
       // Define column widths and spacing
       const columnWidth = 200;
@@ -1356,7 +1369,7 @@ app.get("/generateAnswerSheet/:uid/:sectionname/", async (req, res) => {
 
       // First rectangle information
       doc.rect(70, 10, columnWidth + 299, 110).stroke();
-      doc.text(`${Student_TUPCID}`, 90, 30, {
+      doc.text(`${TUPCIDSTUDENT}`, 90, 30, {
         width: columnWidth,
         align: "left",
         bold: true,
@@ -1649,11 +1662,321 @@ app.get("/generateAnswerSheet/:uid/:sectionname/", async (req, res) => {
 
       doc.moveDown(4);
 
+    
+    
+    } else {
+    for (const student of studentData) {
+      // Extract student information
+      const { Student_TUPCID, FIRSTNAME, SURNAME } = student;
+      const uppercasedFirstName = FIRSTNAME.toUpperCase();
+      const uppercasedSurname = SURNAME.toUpperCase();
+
+      // Define column widths and spacing
+      const columnWidth = 200;
+      doc.lineWidth(5);
+
+      // First rectangle information
+      doc.rect(70, 10, columnWidth + 299, 110).stroke();
+      doc.text(`${Student_TUPCID}`, 90, 30, {
+        width: columnWidth,
+        align: "left",
+        bold: true,
+      });
+      doc.text(`NAME: ${uppercasedSurname}, ${uppercasedFirstName}`, 90, 50, {
+        width: columnWidth,
+        align: "left",
+        bold: true,
+      });
+      doc.text(`TESTNAME: ${test_name}  UID: ${uid}`, 150, 70, {
+        width: columnWidth + 100,
+        align: "center",
+        bold: true,
+      });
+    
+
+      const questionsData = testData[0].questions;
+      const groupedQuestions = {};
+
+      questionsData.forEach((item) => {
+        const questionType = item.questionType;
+        const type = item.type;
+
+        if (questionType) {
+          if (!groupedQuestions[questionType]) {
+            groupedQuestions[questionType] = [];
+          }
+          groupedQuestions[questionType].push({
+            questionNumber: item.questionNumber,
+            type: item.type,
+          });
+        }
+      });
+
+      for (const questionType in groupedQuestions) {
+        const questionsOfType = groupedQuestions[questionType];
+
+        if (questionsOfType.length > 0) {
+          // Determine the display text based on question type
+          let displayText = ``;
+
+          if (questionType === "MultipleChoice") {
+            displayText = "MULTIPLE CHOICE";
+          } else if (questionType === "TrueFalse") {
+            displayText = "TRUE OR FALSE";
+          } else if (questionType === "Identification") {
+            displayText = "IDENTIFICATION";
+          }
+
+          let alignment = "left";
+          if (questionsOfType[0].type === "TYPE 2") {
+            typeoftest = "TYPE 2";
+            alignment = "center";
+          } else if (questionsOfType[0].type === "TYPE 3") {
+            typeoftest = "TYPE 3";
+            alignment = "right";
+          }
+
+          if (
+            questionsOfType[0].type === "TYPE 1" &&
+            questionType === "MultipleChoice"
+          ) {
+            doc
+              .rect(70, 140, columnWidth - 100, 600)
+              .stroke()
+              .strokeColor("black");
+          } else if (
+            questionsOfType[0].type === "TYPE 1" &&
+            questionType === "TrueFalse"
+          ) {
+            doc
+              .rect(70, 140, columnWidth - 60, 600)
+              .stroke()
+              .strokeColor("black");
+          } else if (
+            questionsOfType[0].type === "TYPE 1" &&
+            questionType === "Identification"
+          ) {
+            doc
+              .rect(70, 140, columnWidth + 35, 600)
+              .stroke()
+              .strokeColor("black");
+          }
+
+          if (
+            questionsOfType[0].type === "TYPE 2" &&
+            questionType === "MultipleChoice"
+          ) {
+            doc
+              .rect(70 + 165, 140, columnWidth - 60, 600)
+              .stroke()
+              .strokeColor("black");
+          } else if (
+            questionsOfType[0].type === "TYPE 2" &&
+            questionType === "TrueFalse"
+          ) {
+            doc
+              .rect(70 + 130, 140, columnWidth - 100, 600)
+              .stroke()
+              .strokeColor("black");
+          } else if (
+            questionsOfType[0].type === "TYPE 2" &&
+            questionType === "Identification"
+          ) {
+            doc
+              .rect(70 + 130, 140, columnWidth + 35, 600)
+              .stroke()
+              .strokeColor("black");
+          }
+
+          if (
+            questionsOfType[0].type === "TYPE 3" &&
+            questionType === "MultipleChoice"
+          ) {
+            doc
+              .rect(70 + 330, 140, columnWidth - 60, 600)
+              .stroke()
+              .strokeColor("black");
+          } else if (
+            questionsOfType[0].type === "TYPE 3" &&
+            questionType === "TrueFalse"
+          ) {
+            doc
+              .rect(70 + 330, 140, columnWidth - 60, 600)
+              .stroke()
+              .strokeColor("black");
+          } else if (
+            questionsOfType[0].type === "TYPE 3" &&
+            questionType === "Identification"
+          ) {
+            doc
+              .rect(70 + 265, 140, columnWidth + 35, 600)
+              .stroke()
+              .strokeColor("black");
+          }
+
+          doc.lineWidth(5); // Set the line thickness back to the default value (adjust as needed)
+
+          doc.text(`${displayText}`, 90, 100, {
+            width: columnWidth + 220,
+            align: alignment,
+          });
+
+          doc.moveDown(6);
+
+          let questionNumber = 1;
+          questionsOfType.forEach(() => {
+            if (questionNumber <= 9) {
+              if (questionType === "Identification") {
+                doc.text(`${questionNumber}.  `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else if (questionType === "TrueFalse") {
+                doc.text(`${questionNumber}.   `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else {
+                doc.text(`${questionNumber}.    `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 220,
+                  align: alignment,
+                });
+              }
+            }
+
+            if (questionNumber >= 10) {
+              if (questionType === "Identification") {
+                doc.text(`${questionNumber}.  `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else if (questionType === "TrueFalse") {
+                doc.text(`${questionNumber}.   `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 80,
+                  align: alignment,
+                });
+              } else {
+                doc.text(`${questionNumber}.    `, {
+                  bold: true,
+                  fontSize: 12,
+                  width: columnWidth + 220,
+                  align: alignment,
+                });
+              }
+            }
+
+            // BOXES
+            if (
+              questionType === "MultipleChoice" &&
+              questionsOfType[0].type === "TYPE 1"
+            ) {
+              doc
+                .rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "Identification" &&
+              questionsOfType[0].type === "TYPE 1"
+            ) {
+              doc
+                .rect(doc.x + 45, doc.y - 19.5, 140, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "TrueFalse" &&
+              questionsOfType[0].type === "TYPE 1"
+            ) {
+              doc
+                .rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "MultipleChoice" &&
+              questionsOfType[0].type === "TYPE 2"
+            ) {
+              doc
+                .rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "Identification" &&
+              questionsOfType[0].type === "TYPE 2"
+            ) {
+              doc
+                .rect(doc.x + 175, doc.y - 19.5, 140, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "TrueFalse" &&
+              questionsOfType[0].type === "TYPE 2"
+            ) {
+              doc
+                .rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "MultipleChoice" &&
+              questionsOfType[0].type === "TYPE 3"
+            ) {
+              doc
+                .rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "Identification" &&
+              questionsOfType[0].type === "TYPE 3"
+            ) {
+              doc
+                .rect(doc.x + 320, doc.y - 19.5, 140, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            } else if (
+              questionType === "TrueFalse" &&
+              questionsOfType[0].type === "TYPE 3"
+            ) {
+              doc
+                .rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
+                .lineWidth(boxLineWeight)
+                .stroke("#adb8af")
+                .strokeColor("black");
+            }
+
+            doc.fill("black");
+            doc.strokeColor("black");
+            doc.moveDown(1.3);
+            doc.lineWidth(5);
+            questionNumber++;
+          });
+        }
+      }
+      doc.lineWidth(5);
+
+      doc.moveDown(4);
+
       // Add a page break for the next student (except for the last one)
       if (student !== studentData[studentData.length - 1]) {
         doc.addPage();
       }
     }
+  }
 
     // Pipe the PDF to the response stream
     res.setHeader("Content-Type", "application/pdf");
@@ -1667,6 +1990,8 @@ app.get("/generateAnswerSheet/:uid/:sectionname/", async (req, res) => {
     res.status(500).send("Error generating PDF");
   }
 });
+
+
 
 app.get('/getquestionstypeandnumberandanswer/:uid', async (req, res) => {
   const {  uid } = req.params;
@@ -2086,16 +2411,15 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
     const { uid } = req.params;
 
     // Fetch student scores data
-    const query = "SELECT TUPCID,CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out FROM student_results WHERE UID = ?";
+    const query = "SELECT TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out FROM student_results WHERE UID = ?";
     const [studentScores] = await connection.query(query, [uid]);
 
     if (studentScores.length > 0) {
       const studentlist = [];
+      let idCounter = 1; // Initialize the counter for id
 
       for (const result of studentScores) {
-        const { TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out} = result;
-    
-
+        const { TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out } = result;
 
         const studentDataQuery = "SELECT FIRSTNAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
         const [studentData] = await connection.query(studentDataQuery, [TUPCID]);
@@ -2103,6 +2427,7 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
         if (studentData.length > 0) {
           const { FIRSTNAME, SURNAME } = studentData[0];
           studentlist.push({
+            id: idCounter++, // Increment the counter for each record
             TUPCID,
             FIRSTNAME,
             SURNAME,
@@ -2120,29 +2445,29 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
       let sheet = xlsx.makeNewSheet();
       sheet.name = 'Student Records';
 
-      // Add headers to the sheet:
-      sheet.setCell('A1', 'TUPCID');
-      sheet.setCell('B1', 'FIRSTNAME');
-      sheet.setCell('C1', 'SURNAME');
-      sheet.setCell('D1', 'TOTALSCORE');
-      sheet.setCell('E1', 'Correct');
-      sheet.setCell('F1', 'Wrong');
-      sheet.setCell('G1', 'MAXSCORE');
-      sheet.setCell('H1', 'RESULTS TAKEN');
+      sheet.setCell('A1', 'ID');
+      sheet.setCell('B1', 'TUPCID');
+      sheet.setCell('C1', 'FIRSTNAME');
+      sheet.setCell('D1', 'SURNAME');
+      sheet.setCell('E1', 'TOTALSCORE');
+      sheet.setCell('F1', 'Correct');
+      sheet.setCell('G1', 'Wrong');
+      sheet.setCell('H1', 'MAXSCORE');
+      sheet.setCell('I1', 'RESULTS TAKEN');
 
       // Add data to the sheet based on fetched records:
       studentlist.forEach((record, index) => {
-        const rowIndex = index + 2; // Start from row 2 to avoid headers
-        sheet.setCell(`A${rowIndex}`, record.TUPCID);
-        sheet.setCell(`B${rowIndex}`, record.FIRSTNAME);
-        sheet.setCell(`C${rowIndex}`, record.SURNAME);
-        sheet.setCell(`D${rowIndex}`, record.TOTALSCORE);
-        sheet.setCell(`E${rowIndex}`, record.CORRECT);
-        sheet.setCell(`F${rowIndex}`, record.WRONG);
-        sheet.setCell(`G${rowIndex}`, record.MAXSCORE);
-        const date = new Date(record.results_out); // Assuming `results_out` is a string in the format '2023-11-19 21:55:04'
-  
-        // Format the date in a readable format (e.g., YYYY-MM-DD HH:MM:SS)
+        const rowIndex = index + 2;
+        sheet.setCell(`A${rowIndex}`, record.id);
+        sheet.setCell(`B${rowIndex}`, record.TUPCID);
+        sheet.setCell(`C${rowIndex}`, record.FIRSTNAME);
+        sheet.setCell(`D${rowIndex}`, record.SURNAME);
+        sheet.setCell(`E${rowIndex}`, record.TOTALSCORE);
+        sheet.setCell(`F${rowIndex}`, record.CORRECT);
+        sheet.setCell(`G${rowIndex}`, record.WRONG);
+        sheet.setCell(`H${rowIndex}`, record.MAXSCORE);
+        const date = new Date(record.results_out);
+
         const formattedDate = date.toLocaleString('en-US', {
           year: 'numeric',
           month: '2-digit',
@@ -2151,8 +2476,8 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
           minute: '2-digit',
           second: '2-digit'
         });
-      
-        sheet.setCell(`H${rowIndex}`, formattedDate);
+
+        sheet.setCell(`I${rowIndex}`, formattedDate);
       });
 
       // Set headers for response
@@ -2171,6 +2496,7 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 app.put('/updateTotalScore/:TUPCID', async (req, res) => {
   try {
@@ -2194,6 +2520,330 @@ app.put('/updateTotalScore/:TUPCID', async (req, res) => {
   }
 });
 
+
+//auditlogstart here
+
+app.get('/generatefacultylog', async (req, res) => {
+  try {
+    // Fetch data from the 'faculty_accounts' table
+    const [rows] = await connection.query('SELECT TUPCID, SURNAME, FIRSTNAME, MIDDLENAME, GSFEACC, SUBJECTDEPT, REGISTEREDDATE FROM faculty_accounts');
+
+    const facultyList = [];
+
+    rows.forEach((faculty, index) => {
+      const date = new Date(faculty.REGISTEREDDATE);
+      const formattedDate = date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      facultyList.push({
+        id: index + 1,
+        acc: faculty.TUPCID,
+        firstName: faculty.FIRSTNAME,
+        middleName: faculty.MIDDLENAME,
+        surname: faculty.SURNAME,
+        gsfeacc: faculty.GSFEACC,
+        subjectDept: faculty.SUBJECTDEPT,
+        register: formattedDate, // Add formatted date to the faculty list
+      });
+    });
+
+    // Create a new Excel document
+    let xlsx = officegen('xlsx');
+    let sheet = xlsx.makeNewSheet();
+    sheet.name = 'FacultyAuditLog';
+
+    // Add headers to the sheet
+    sheet.data[0] = [
+      'No.',
+      'ID ACCOUNT',
+      'FIRSTNAME',
+      'MIDDLENAME',
+      'SURNAME',
+      'GSFE ACCOUNT',
+      'SUBJECT DEPARTMENT',
+      'REGISTERED DATE',
+    ];
+
+    // Add data to the sheet
+    facultyList.forEach((faculty, index) => {
+      sheet.data[index + 1] = [
+        faculty.id,
+        faculty.acc,
+        faculty.firstName,
+        faculty.middleName,
+        faculty.surname,
+        faculty.gsfeacc,
+        faculty.subjectDept,
+        faculty.register,
+      ];
+    });
+
+    // Set headers for response
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="FacultyAuditLog.xlsx"');
+
+    // Generate the Excel file and send it in the response
+    xlsx.generate(res);
+
+    console.log('Excel file generation initiated for Faculty Audit Log');
+  } catch (error) {
+    console.error('Error generating Excel file:', error);
+    res.status(500).send('Error generating Excel file');
+  }
+});
+
+
+app.get('/generatetestlistlog', async (req, res) => {
+  try {
+    // Fetch data from the 'faculty_testlist' table
+    const [rows] = await connection.query('SELECT Professor_ID, Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, TestName, Subject, Section_Name, Semester, Uid_Section, Uid_Test, date_created FROM faculty_testlist');
+
+    // Create an instance of officegen Excel
+    let xlsx = officegen('xlsx');
+    let sheet = xlsx.makeNewSheet();
+    sheet.name = 'Test List Records';
+
+    // Add headers to the sheet
+    sheet.setCell('A1', 'ID');
+    sheet.setCell('B1', 'Professor ID');
+    sheet.setCell('C1', 'First Name');
+    sheet.setCell('D1', 'Middle Name');
+    sheet.setCell('E1', 'Last Name');
+    sheet.setCell('F1', 'Subject Department');
+    sheet.setCell('G1', 'Test Name');
+    sheet.setCell('H1', 'Subject');
+    sheet.setCell('I1', 'Section Name');
+    sheet.setCell('J1', 'Semester');
+    sheet.setCell('K1', 'Uid Section');
+    sheet.setCell('L1', 'Uid Test');
+    sheet.setCell('M1', 'Date Created');
+
+    // Add data to the sheet based on fetched records
+    rows.forEach((record, index) => {
+      const rowIndex = index + 2;
+      sheet.setCell(`A${rowIndex}`, index + 1); // ID acting as index
+      sheet.setCell(`B${rowIndex}`, record.Professor_ID);
+      sheet.setCell(`C${rowIndex}`, record.Professor_FirstName);
+      sheet.setCell(`D${rowIndex}`, record.Professor_MiddleName);
+      sheet.setCell(`E${rowIndex}`, record.Professor_LastName);
+      sheet.setCell(`F${rowIndex}`, record.Professor_SubjectDept);
+      sheet.setCell(`G${rowIndex}`, record.TestName);
+      sheet.setCell(`H${rowIndex}`, record.Subject);
+      sheet.setCell(`I${rowIndex}`, record.Section_Name);
+      sheet.setCell(`J${rowIndex}`, record.Semester);
+      sheet.setCell(`K${rowIndex}`, record.Uid_Section);
+      sheet.setCell(`L${rowIndex}`, record.Uid_Test);
+      
+      const date = new Date(record.date_created); // Assuming date_created is in 'YYYY-MM-DD HH:MM:SS' format
+      const formattedDate = date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      
+      sheet.setCell(`M${rowIndex}`, formattedDate); // Add formatted date to the sheet
+    });
+
+    // Set response headers for Excel file download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="TestListRecords.xlsx"');
+
+    // Pipe the generated Excel file directly to the response stream
+    xlsx.generate(res);
+
+    console.log('Excel file generation initiated for Test List Records');
+  } catch (error) {
+    console.error('Error generating Excel file:', error);
+    res.status(500).send('Error generating Excel file');
+  }
+});
+
+
+app.get('/generatestudentlistlog', async (req, res) => {
+  try {
+    // Fetch data from the 'student_accounts' table
+    const [rows] = await connection.query('SELECT TUPCID, FIRSTNAME, MIDDLENAME, SURNAME, GSFEACC, COURSE, SECTION, YEAR, STATUS, REGISTEREDDATE FROM student_accounts');
+
+    const studentList = rows.map((student, index) => {
+      const date = new Date(student.REGISTEREDDATE); 
+      const formattedDate = date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      return {
+        id: index + 1,
+        TUPCID: student.TUPCID,
+        FIRSTNAME: student.FIRSTNAME,
+        MIDDLENAME: student.MIDDLENAME,
+        SURNAME: student.SURNAME,
+        GSFEACC: student.GSFEACC,
+        COURSE: student.COURSE,
+        SECTION: student.SECTION,
+        YEAR: student.YEAR,
+        STATUS: student.STATUS,
+        REGISTEREDDATE: formattedDate // Add formatted date to the object
+      };
+    });
+
+    // Create a new instance of officegen
+    const officegen = require('officegen');
+    const xlsx = officegen('xlsx');
+
+    // Create a new worksheet
+    const sheet = xlsx.makeNewSheet();
+    sheet.name = 'StudentListRecords';
+
+    // Add headers to the sheet
+    sheet.data.push(['ID', 'TUPCID', 'FIRSTNAME', 'MIDDLENAME', 'SURNAME', 'GSFEACC', 'COURSE', 'SECTION', 'YEAR', 'STATUS', 'REGISTEREDDATE']);
+
+    // Add data to the sheet based on fetched records
+    studentList.forEach((student) => {
+      sheet.data.push([
+        student.id,
+        student.TUPCID,
+        student.FIRSTNAME,
+        student.MIDDLENAME,
+        student.SURNAME,
+        student.GSFEACC,
+        student.COURSE,
+        student.SECTION,
+        student.YEAR,
+        student.STATUS,
+        student.REGISTEREDDATE
+      ]);
+    });
+
+    // Set response headers for Excel file download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="StudentListRecords.xlsx"');
+
+    // Pipe the generated Excel file directly to the response stream
+    xlsx.generate(res, {
+      finalize: (written) => {
+        console.log('Excel file generation initiated for Student List Records');
+      }
+    });
+  } catch (error) {
+    console.error('Error generating Excel file:', error);
+    res.status(500).send('Error generating Excel file');
+  }
+});
+
+
+//PRESET OF QUESTIONS
+
+app.post('/addtopreset', async(req,res) => {
+  const { Professor_ID, TESTNAME, UID, data } = req.body;
+
+  
+
+  const questionsToSave = JSON.stringify(data); 
+
+  const insertQuery = `
+    INSERT INTO preset_questions (Professor_ID, TESTNAME, UID, questions, questions_saved)
+    VALUES (?, ?, ?, ?, NOW())
+  `;
+
+ 
+  connection.query(insertQuery, [Professor_ID, TESTNAME, UID, questionsToSave], (err, result) => {
+    if (err) {
+      console.error('Error inserting data:', err);
+      res.status(500).json({ error: 'Error updating data. Please try again.' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Questions saved successfully.' });
+  });
+});
+
+
+app.put("/updatequestions/:TUPCID/:uid/:testname", async (req, res) => {
+  try {
+    const { TUPCID, uid, testname } = req.params;
+    const { data } = req.body;
+    const updateQuery = `
+      UPDATE preset_questions
+      SET
+        questions = ?,
+        questions_saved = NOW() 
+      WHERE Professor_ID = ? AND UID = ? AND testname = ?;
+    `;
+
+    const updateValues = [JSON.stringify(data), TUPCID, uid, testname];
+
+    await connection.query(updateQuery, updateValues);
+
+    res.status(200).json({ message: "Data updated successfully" });
+  } catch (error) {
+    console.error("Error updating data:", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
+  }
+});
+
+//Preset
+app.get("/Preset", async (req, res) => {
+  const { UidProf } = req.query;
+  try {
+    const query =
+      "SELECT TESTNAME, UID, questions, questions_saved FROM preset_questions WHERE Professor_ID = ?";
+    const [row] = await connection.query(query, [UidProf]);
+    
+    return res.status(200).json(row);
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+
+
+//for questions
+// For questions
+app.get("/PresetQuestions", async (req, res) => {
+  const { TestId } = req.query;
+
+  try {
+    const query = "SELECT questions FROM preset_questions WHERE UID = ?";
+    const [row] = await connection.query(query, [TestId]);
+
+    // Extract and filter out only the TotalScore object
+    const allQuestions = row.flatMap(item => item.questions).filter(question => {
+      if (question && 'TotalScore' in question) {
+        return false; // Filter out TotalScore
+      }
+
+       // Filter out options based on the answer
+       if (question && question.options && question.answer) {
+        question.options = question.options
+          .filter(option => option.label === question.answer)
+          .map(option => option.text); // Extracting text values from options
+      }
+
+      return true;
+    });
+
+    console.log("alldata:", allQuestions);
+    return res.status(200).json(allQuestions);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send({ message: "Internal server error" });
+  }
+});
 
 // Start the server
 app.listen(3001, () => {
