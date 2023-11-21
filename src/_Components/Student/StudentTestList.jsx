@@ -71,16 +71,16 @@ function StudentTestList({ clicked, setClicked }) {
   };
 
   const subject = () => {
-    const sortedList = [...testList].sort(
-      (a, b) => a.Section_Subject.localeCompare(b.Section_Subject)
+    const sortedList = [...testList].sort((a, b) =>
+      a.Section_Subject.localeCompare(b.Section_Subject)
     );
     setSorted(true);
     setTestList(sortedList);
   };
 
   const course = () => {
-    const sortedList = [...testList].sort(
-      (a, b) => a.Section_Name.localeCompare(b.Section_Name)
+    const sortedList = [...testList].sort((a, b) =>
+      a.Section_Name.localeCompare(b.Section_Name)
     );
     setSorted(true);
     setTestList(sortedList);
@@ -183,12 +183,32 @@ function StudentTestList({ clicked, setClicked }) {
             </div>
             {/* End of Modal for Add test */}
           </div>
-          <div className="d-sm-flex d-none gap-md-2 gap-1 position-absolute end-0 align-self-end">
+          <div className="dropdown align-self-center">
+            <i
+              className="bi bi-arrow-down-up d-md-none d-flex fs-4"
+              type="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            ></i>
+            <ul className="dropdown-menu">
+              <li>
+                <a className="dropdown-item" onClick={subject}>
+                  SUBJECT
+                </a>
+              </li>
+              <li>
+                <a className="dropdown-item" onClick={course}>
+                  SECTION / COURSE
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div className="d-md-flex d-none gap-md-2 gap-1 position-absolute end-0 align-self-end">
             <button className="btn btn-outline-dark btn-sm" onClick={subject}>
               SUBJECT
             </button>
             <button className="btn btn-outline-dark btn-sm" onClick={course}>
-              COURSE
+              SECTION / COURSE
             </button>
           </div>
         </div>
