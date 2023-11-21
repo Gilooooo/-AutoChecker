@@ -57,7 +57,7 @@ def get_image():
         return jsonify({'error': 'Invalid image index'})
 
     image_filenames = [
-        'type_0_image2threshold.jpg',
+        'type_0_image1grayscale.jpg',
         'type_1_image6closing.jpg',
         'type_2_image6closing.jpg',
         'type_3_image6closing.jpg'
