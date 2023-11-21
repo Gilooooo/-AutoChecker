@@ -13,6 +13,7 @@ export default function TestPaper() {
   const testname = searchparams.get("testname");
   const sectionname = searchparams.get("sectionname");
   const uid = searchparams.get("uid");
+  const subject = searchparams.get("subject");
   const semester = searchparams.get("semester");
   const [savedValues, setSavedValues] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -675,7 +676,7 @@ export default function TestPaper() {
         console.log("DATA SENDING....", updatedSavedValues);
 
         if (savedData.length > 0) {
-          // Data already exists, perform a PUT request to update it in the testpaper table
+        
           const response1 = await axios.put(
             `http://localhost:3001/updatetestpaper/${TUPCID}/${uid}/${sectionname}`,
             {
@@ -688,6 +689,18 @@ export default function TestPaper() {
           } else {
             setErrorMessage("Error updating data. Please try again.");
           }
+
+          const updatequestions = await axios.put(
+            `http://localhost:3001/updatequestions/${TUPCID}/${uid}/${testname}`,
+            {
+              data: updatedSavedValues,
+            }
+          );
+          if (updatequestions.status === 200) {
+            alert("Questions updated successfully. You can access it on PRESETS button");
+          } else {
+            alert("Error updating data. Please try again.");
+          }
         } else {
           const response = await axios.post(
             "http://localhost:3001/createtestpaper",
@@ -696,6 +709,7 @@ export default function TestPaper() {
               UID: uid,
               test_name: testname,
               section_name: sectionname,
+              subject: subject,
               semester: semester,
               data: updatedSavedValues,
             }
@@ -706,6 +720,23 @@ export default function TestPaper() {
           } else {
             setErrorMessage("Error saving data. Please try again.");
           }
+
+          const savequestions = await axios.post(
+            "http://localhost:3001/addtopreset",
+            {
+              Professor_ID: TUPCID,
+              TESTNAME: testname,
+              UID: uid,
+              data: updatedSavedValues,
+            }
+          );
+
+          if (savequestions.status === 200) {
+            alert("Questions save successfully. You may now access it on PRESETS button");
+          } else {
+            alert("Error updating data. Please try again.");
+          }
+
         }
         setTimeout(() => {
           setErrorMessage("");
@@ -718,10 +749,25 @@ export default function TestPaper() {
       }
     };
 
-    //beta testing document
-
+    
+    const openPresetPage = () => {
+      // Define the URL of the Preset page
+      const presetPageUrl = '/Faculty/Preset';
+  
+      // Open the Preset page in a new tab/window with specific dimensions
+      const newWindow = window.open(presetPageUrl, '_blank', 'toolbar=0,location=0,status=0,menubar=0,scrollbars=1,width=200,height=1200,top=100,left=1080');
+      if (newWindow) {
+        newWindow.focus();
+      }
+    };
     return (
       <div className="d-flex flex-column justify-content-center align-items-center container-sm col-lg-8 col-11 border border-dark rounded py-2">
+        <div className="fixed-bottom d-flex justify-content-end p-3">
+        <button className="btn btn-outline-dark" onClick={openPresetPage}>
+        PRESETS
+      </button>
+      </div>
+      
         {fields.map((field, index) => (
           <fieldset
             className="row col-12 justify-content-center"
@@ -743,6 +789,7 @@ export default function TestPaper() {
                 max="100"
               />
             </legend>
+            
             <div className="row align-items-center p-0">
               <span className="col-2 p-0 ">TYPE OF TEST:</span>
 
@@ -1100,6 +1147,7 @@ export default function TestPaper() {
             Save All
           </button>
         </div>
+        
         <div className="d-flex flex-column mt-2">
           <div className="d-flex gap-2">
             <input type="checkbox" id="generateWord" />
@@ -1132,7 +1180,7 @@ export default function TestPaper() {
           </Link>
           &nbsp;
           <h3 className="m-0">
-            {sectionname}: {semester} - {testname} UID: {uid}
+            {sectionname}: {subject} - {semester}: {testname} UID: {uid}
           </h3>
         </div>
         <ul className="d-flex flex-wrap justify-content-around mt-3 list-unstyled">
@@ -1145,6 +1193,7 @@ export default function TestPaper() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
               },
             }}
             className="text-decoration-none link-dark"
@@ -1159,6 +1208,7 @@ export default function TestPaper() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
               },
             }}
             className="text-decoration-none link-dark"
@@ -1173,6 +1223,7 @@ export default function TestPaper() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
               },
             }}
             className="text-decoration-none link-dark"

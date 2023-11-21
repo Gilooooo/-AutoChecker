@@ -38,9 +38,6 @@ function AdminReport({clicked, setClicked}){
               className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
               onClick={handleclick}
             ></i>
-            <Link href={{ pathname: "/Admin_Page" }}>
-              <i className="bi bi-arrow-left fs-3 custom-black-color d-sm-block d-none"></i>
-            </Link>
             <h2 className="m-0 w-100 text-sm-start text-center pe-3">
               REPORT PROBLEM
             </h2>

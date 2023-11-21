@@ -15,8 +15,8 @@ export default function AnswerSheet() {
   const testname = searchparams.get("testname");
   const sectionname = searchparams.get("sectionname");
   const uid = searchparams.get("uid");
+  const subject = searchparams.get("subject");
   const semester = searchparams.get("semester");
-
 
 
 
@@ -114,12 +114,12 @@ export default function AnswerSheet() {
     <main className="w-100 min-vh-100 p-2">
       <section>
         <div className="d-flex align-items-center">
-          <a href="/Faculty/ListOfTest">
-          <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
-          </a>
+        <Link href="/Faculty/ListOfTest">
+            <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
+          </Link>
           &nbsp;
           <h3 className="m-0">
-          {sectionname}: {semester} - {testname}  UID: {uid} 
+          {sectionname}: {subject} - {semester}: {testname} UID: {uid}
           </h3>
         </div>
         <ul className="d-flex flex-wrap justify-content-around mt-3 list-unstyled">
@@ -131,6 +131,7 @@ export default function AnswerSheet() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
                 
               },
               
@@ -147,6 +148,7 @@ export default function AnswerSheet() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
                 
               },
             }}className="text-decoration-none link-dark">
@@ -159,6 +161,7 @@ export default function AnswerSheet() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
                 
               },
             }} className="text-decoration-none link-dark">

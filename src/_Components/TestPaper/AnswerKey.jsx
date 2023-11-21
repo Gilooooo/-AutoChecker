@@ -15,6 +15,7 @@ export default function AnswerKey() {
   const testname = searchparams.get("testname");
   const sectionname = searchparams.get("sectionname");
   const uid = searchparams.get("uid");
+  const subject = searchparams.get("subject");
   const semester = searchparams.get("semester");
   const [testData, setTestData] = useState([]);
   const [testType, setTestType] = useState("No Test Paper Yet");
@@ -293,12 +294,12 @@ export default function AnswerKey() {
     <main className="min-vh-100 w-100 p-2">
       <section>
         <div className="d-flex align-items-center">
-          <a className="align-self-center" href="/Faculty/ListOfTest">
+        <Link href="/Faculty/ListOfTest">
             <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
-          </a>
+          </Link>
 
           <h3 className="m-0">
-            {sectionname}: {semester} - {testname} UID: {uid}
+          {sectionname}: {subject} - {semester}: {testname} UID: {uid}
           </h3>
         </div>
         <ul className="d-flex flex-wrap justify-content-around mt-3 list-unstyled">
@@ -310,6 +311,7 @@ export default function AnswerKey() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
               },
             }}
             className="text-decoration-none link-dark"
@@ -324,6 +326,7 @@ export default function AnswerKey() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
               },
             }}
             className="text-decoration-none link-dark"
@@ -339,6 +342,7 @@ export default function AnswerKey() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
+                subject: subject
               },
             }}
             className="text-decoration-none link-dark"
@@ -392,10 +396,11 @@ export default function AnswerKey() {
 
                     
                       const scoreOfStudent = matchingQuestion?.answer === answer.answer ? matchingQuestion.score : 0;
+                      const scoreText = scoreOfStudent === 0 ? 'INCORRECT' : 'CORRECT';
 
                       return (
                         <li key={aIndex}>
-                          {`${answer.questionNumber}. ${answer.answer} - ${scoreOfStudent}`}
+                          {`${answer.questionNumber}. ${answer.answer} - ${scoreText}`}
                         </li>
                       );
                       

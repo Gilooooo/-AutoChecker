@@ -123,9 +123,9 @@ export default function Records() {
       <section className="h-100">
         {/* Header and Navigation */}
         <div className="d-flex align-items-center">
-          <a href="/Faculty">
+        <Link href="/Faculty/ListOfTest">
             <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
-          </a>
+          </Link>
           <h3 className="m-0">
             {sectionname}: {semester} - {testname} UID: {uid}
           </h3>

@@ -12,7 +12,7 @@ function StudentsList({ clicked, setClicked }) {
   const params = useSearchParams();
   const Uid_Section = params.get("Uid_Section");
   const Section = params.get("Section");
-  const [warning, setWarning] = useState(false);
+  const [warning, setWarning] = useState(false)
 
   const firstName = () => {
     const sortedList = [...students].sort((a, b) =>
@@ -85,14 +85,14 @@ function StudentsList({ clicked, setClicked }) {
     const data = {
       selected: selectedStudents,
     };
-
+    
     try {
       const response = await axios.delete(
         `http://localhost:3001/Faculty_Students?Uid_Section=${Uid_Section}&Professor_Uid=${TUPCID}&Section=${Section}`,
         { data }
       );
-      if (response.status == 200) {
-        setWarning(!warning);
+      if(response.status == 200){
+        setWarning(!warning)
         fetchStudents();
       }
     } catch (err) {
@@ -143,36 +143,6 @@ function StudentsList({ clicked, setClicked }) {
           </span>
           <div className="d-flex flex-column align-self-end">
             <small className="text-end">Sort by:</small>
-            <div className="dropdown align-self-center">
-              <i
-                className="bi bi-arrow-down-up d-md-none d-flex fs-4"
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              ></i>
-              <ul className="dropdown-menu">
-                <li>
-                  <a className="dropdown-item" onClick={firstName}>
-                    FIRSTNAME
-                  </a>
-                </li>
-                <li>
-                  <a className="dropdown-item" onClick={surName}>
-                    SURNAME
-                  </a>
-                </li>
-                <li>
-                  <a className="dropdown-item" onClick={AZName}>
-                    A-Z
-                  </a>
-                </li>
-                <li>
-                  <a className="dropdown-item" onClick={ZAName}>
-                    Z-A
-                  </a>
-                </li>
-              </ul>
-            </div>
             <div className="d-md-flex d-none gap-md-2 gap-1 align-self-end">
               <button
                 className="btn btn-outline-dark btn-sm"
@@ -189,27 +159,6 @@ function StudentsList({ clicked, setClicked }) {
               <button className="btn btn-outline-dark btn-sm" onClick={ZAName}>
                 Z-A
               </button>
-            </div>
-            <div className="dropdown align-self-center">
-              <i
-                className={selectedStudents.length > 0  ? "bi bi-person-x d-md-none d-block align-self-end fs-3"
-                : "d-none"}
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              ></i>
-              <ul className="dropdown-menu">
-                <li>
-                  <a className="dropdown-item" onClick={() => setWarning(!warning)}>
-                    REMOVE
-                  </a>
-                </li>
-                <li>
-                  <a className="dropdown-item" onClick={checkAll}>
-                    CHECK ALL
-                  </a>
-                </li>
-              </ul>
             </div>
             <div
               className={
@@ -267,8 +216,7 @@ function StudentsList({ clicked, setClicked }) {
                 </div>
                 <div className="modal-body">
                   <p className="text-center">
-                    It will lead you to the forget password and you need to
-                    re-login again, are you sure to do that?
+                  The selected student/s will be remove in your class. Do you want to continue?
                   </p>
                 </div>
                 <div className="modal-footer align-self-center">
@@ -280,14 +228,14 @@ function StudentsList({ clicked, setClicked }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    data-bs-dismiss="modal"
-                    onClick={handleRemove}
-                  >
-                    Ok
-                  </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      data-bs-dismiss="modal"
+                      onClick={handleRemove}
+                    >
+                      Ok
+                    </button>
                 </div>
               </div>
             </div>

@@ -30,6 +30,36 @@ function Admin_Student({ clicked, setClicked }) {
   const newStudentList = student.filter((lists) =>
     lists.FIRSTNAME.toLowerCase().includes(searchValue.toLowerCase())
   );
+
+
+  const generatestudentlist = async () => {
+    try {
+      const response = await axios.get('http://localhost:3001/generatestudentlistlog', {
+        responseType: 'blob',
+      });
+
+      if (response.status === 200) {
+        const blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = window.URL.createObjectURL(blob);
+        downloadLink.setAttribute('download', 'STUDENTLIST_AUDITLOG.xlsx');
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        console.log('Student list audit log Excel file download initiated');
+      } else {
+        console.error('Failed to initiate Student list audit log Excel file download');
+      }
+    } catch (error) {
+      console.error('Error while initiating Student list audit log Excel file download:', error);
+    }
+  };
+
+
   return (
     <main className="w-100 p-0 vh-100 align-items-start">
       <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-center justify-content-center">
@@ -52,7 +82,7 @@ function Admin_Student({ clicked, setClicked }) {
               className="px-3 py-1 rounded border border-dark"
               onChange={(e) => setSearchValue(e.target.value)}
             />
-            <button className="btn btn-dark">AUDIT LOG</button>
+            <button className="btn btn-dark" onClick={generatestudentlist}>AUDIT LOG</button>
           </div>
         </div>
         <section className="container-fluid col-12">

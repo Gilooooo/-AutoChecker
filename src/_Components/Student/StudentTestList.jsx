@@ -214,32 +214,7 @@ function StudentTestList({ clicked, setClicked }) {
                       </Link>
                     </div>
                   ))}
-                {/* // Object.keys(test.NameMap).map((uidTest, index) => (
-                  //   <div
-                  //     className="p-1 px-3 border border-dark rounded col-12"
-                  //     key={index}
-                  //   >
-                  //     <Link
-                  //       href={{
-                  //         pathname: "/Student/Result",
-                  //         query: {
-                  //           studentid: TUPCID,
-                  //           uidoftest: uidTest,
-                  //         },
-                  //       }}
-                  //     >
-                  //       <h5 className="fw-light">
-                  //         Test UID: {uidTest} | Test Name: {uidTest.TestName}
-                  //         |
-                  //         {studentScores && studentScores.length > index
-                  //           ? `GRADED | ${studentScores[index].TOTALSCORE} / ${studentScores[index].MAXSCORE}`
-                  //           : "PENDING | Score not available"}
-                  //       </h5>
-                  //     </Link>
-                  //   </div>
-                  // )) */}
-
-                {/* Published test */}
+                
               </div>
             </div>
           ))}

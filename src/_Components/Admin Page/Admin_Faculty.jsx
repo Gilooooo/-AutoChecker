@@ -32,6 +32,36 @@ function Admin_Faculty({ clicked, setClicked }) {
   faculties.FIRSTNAME.toLowerCase().includes(searchValue.toLowerCase())
 );
 
+
+const generateAuditLog = async () => {
+  try {
+    const response = await axios.get('http://localhost:3001/generatefacultylog', {
+      responseType: 'blob',
+    });
+
+    if (response.status === 200) {
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = window.URL.createObjectURL(blob);
+      downloadLink.setAttribute('download', 'FACULTY_AUDITLOG.xlsx');
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      console.log('Audit log Excel file download initiated');
+    } else {
+      console.error('Failed to initiate Audit log Excel file download');
+    }
+  } catch (error) {
+    console.error('Error while initiating Audit log Excel file download:', error);
+  }
+};
+
+
+
   return (
     <main className="w-100 p-0 vh-100">
       <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-center justify-content-center">
@@ -63,7 +93,7 @@ function Admin_Faculty({ clicked, setClicked }) {
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                 />
-                <button className="btn btn-dark">AUDIT LOG</button>
+                <button className="btn btn-dark" onClick={generateAuditLog}>AUDIT LOG</button>
               </div>
             </div>
             <div className="pe-2 table-responsive mt-2">

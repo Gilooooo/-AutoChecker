@@ -362,9 +362,7 @@ function ListOfTest({ setClicked, clicked }) {
               </div>
             </div>
             {/* End of Modal for Add test */}
-            <Link href={{ pathname: "/Faculty/Preset" }}>
-              <button className="btn btn-outline-dark">PRESETS</button>
-            </Link>
+            
           </div>
           <div className="dropdown align-self-center">
             <i
@@ -437,6 +435,7 @@ function ListOfTest({ setClicked, clicked }) {
                         uid: test.Uid_Test,
                         sectionname: test.Section_Name,
                         semester: test.Semester,
+                        subject: test.Subject
                       },
                     }}
                     className="link-dark text-decoration-none
