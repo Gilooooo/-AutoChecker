@@ -17,6 +17,7 @@ export default function Records() {
   const [recordlist, setRecordList] = useState([]);
   const [editMode, setEditMode] = useState(false);
   const [updatedRecords, setUpdatedRecords] = useState([]);
+  const [warning, setWarning] = useState(false);
 
   const fetchResult = async () => {
     try {
@@ -90,9 +91,7 @@ export default function Records() {
       const sumAnswers = parseInt(CORRECT) + parseInt(WRONG);
 
       if (sumAnswers !== parseInt(MAXSCORE)) {
-        alert(
-          "Sum of correct and wrong answers does not match MAXSCORE. Cannot update."
-        );
+        setWarning(!warning)
         return; // Stop execution if the condition fails
       }
 
@@ -120,10 +119,10 @@ export default function Records() {
 
   return (
     <main className="min-vh-100 p-2 w-100">
-      <section className="h-100">
+      <section className="h-50">
         {/* Header and Navigation */}
         <div className="d-flex align-items-center">
-        <Link href="/Faculty/ListOfTest">
+          <Link href="/Faculty/ListOfTest">
             <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
           </Link>
           <h3 className="m-0">
@@ -181,7 +180,7 @@ export default function Records() {
         </ul>
 
         {/* Content */}
-        <section className="container col-md-8 col-12 col-xl-6 mt-4 py-4 col-10 px-3 border border-dark rounded h-75">
+        <section className="container col-md-8 col-12 col-xl-6 mt-4 py-4 col-10 px-3 border border-dark rounded h-100">
           <div className="border border-dark rounded h-100 overflow-auto">
             {/* Table for Student Records */}
             <table className="table table-bordered table-striped">
@@ -205,6 +204,7 @@ export default function Records() {
                       {editMode ? (
                         <input
                           type="number"
+                          className="rounded border border-dark px-2 py-1 w-100"
                           value={record.CORRECT}
                           onChange={(e) => {
                             const updatedRecords = [...recordlist];
@@ -220,6 +220,7 @@ export default function Records() {
                       {editMode ? (
                         <input
                           type="number"
+                          className="rounded border border-dark px-2 py-1 w-100"
                           value={record.WRONG}
                           onChange={(e) => {
                             const updatedRecords = [...recordlist];
@@ -236,17 +237,17 @@ export default function Records() {
                     </td>
                     <td>
                       {editMode ? (
-                        <div>
-                          <button onClick={() => handleUpdate(record)}>
+                        <div className="d-flex flex-column gap-2">
+                          <button onClick={() => handleUpdate(record)} className="btn btn-sm btn-outline-dark">
                             Update
                           </button>
-                          <button onClick={() => handleEditMode()}>
+                          <button onClick={() => handleEditMode()} className="btn btn-sm btn-outline-dark">
                             Cancel
                           </button>
                         </div>
                       ) : (
-                        <button onClick={() => handleEditMode()}>
-                          Update Scores
+                        <button className="btn btn-outline-dark"onClick={() => handleEditMode()}>
+                          Change Scores
                         </button>
                       )}
                     </td>
@@ -257,11 +258,40 @@ export default function Records() {
           </div>
         </section>
         <div className="text-center mt-3">
-              <button onClick={generateSheet} className="btn btn-primary">
-                GENERATE SHEET
-              </button>
-            </div>
+          <button onClick={generateSheet} className="btn btn-outline-dark">
+            GENERATE SHEET
+          </button>
+        </div>
         {/* End Content */}
+        {/* Modal */}
+        {warning && (
+          <div className="d-block modal" tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content border border-dark">
+                <div className="modal-header">
+                  <h5 className="modal-title">Warning</h5>
+                </div>
+                <div className="modal-body">
+                  <p className="text-center">
+                    Sum of correct and wrong answers does not match MAXSCORE. Cannot update.
+                  </p>
+                </div>
+                <div className="modal-footer align-self-center">
+                  <button
+                    type="button"
+                    className="btn btn-dark"
+                    data-bs-dismiss="modal"
+                    onClick={() => setWarning(!warning)}
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+        }
+        {/* Modal */}
       </section>
     </main>
   );

@@ -763,8 +763,8 @@ export default function TestPaper() {
     return (
       <div className="d-flex flex-column justify-content-center align-items-center container-sm col-lg-8 col-11 border border-dark rounded py-2">
         <div className="fixed-bottom d-flex justify-content-end p-3">
-        <button className="btn btn-outline-dark" onClick={openPresetPage}>
-        PRESETS
+        <button className="btn btn-dark btn-lg" onClick={openPresetPage}>
+          PRESET
       </button>
       </div>
       

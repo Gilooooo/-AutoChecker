@@ -245,13 +245,33 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
   return (
     <div>
       {isPopUpVisible && (
-        <div className="popup">
-          <h2>PICTURE CONVERTED TO TEXT</h2>
-          <p>Extracted Text: {recognizedText}</p>
+         <div className="d-block modal" tabIndex="-1">
+         <div className="modal-dialog modal-dialog-centered">
+           <div className="modal-content border-dark">
+             <div className="modal-header">
+               <h5 className="modal-title">Extracting Text</h5>
+             </div>
+             <div className="modal-body">
+               <p className="text-center">
+               <p>Extracted Text: {recognizedText}</p>
           <p>PROCESS ALMOST COMPLETE...CONTINUE?</p>
-          <button onClick={sendTextToServer}>Send</button>
-          <button  onClick={cancelAction}>Cancel</button>
-        </div>
+               </p>
+             </div>
+             <div className="modal-footer align-self-center">
+               <button
+                 type="button"
+                 className="btn btn-danger"
+                 onClick={cancelAction}
+               >
+                 Cancel
+               </button>
+               <button className="btn btn-success" onClick={sendTextToServer}>
+                 Send
+               </button>
+             </div>
+           </div>
+         </div>
+       </div>
       )}
 
       {setLoading && (

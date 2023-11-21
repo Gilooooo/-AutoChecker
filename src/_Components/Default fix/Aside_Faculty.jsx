@@ -82,8 +82,7 @@ function Aside_Faculty({ clicked, setClicked }) {
       <aside
         ref={asideRef}
         className={`
-          ${
-            clicked ? "custom-aside-admin2 px-2" : "custom-aside-admin1"
+          ${clicked ? "custom-aside-admin2 px-2" : "custom-aside-admin1"
           } vh-100 position-fixed  custom-red
             `}
       >
@@ -105,51 +104,54 @@ function Aside_Faculty({ clicked, setClicked }) {
               <small>{information.SubjectDept}</small>
             </div>
           </div>
-          <div className="d-flex flex-column text-light align-self-start custom-black-color">
-            <Link
-              href={{ pathname: "/Faculty/Settings" }}
-              className="text-decoration-none link-dark"
-            >
-              {path == "/Faculty/Settings" ? (
-                <div className="d-flex align-items-center gap-1">
-                  <i className="bi bi-gear-fill fs-3"></i>
-                  <span className="fs-5 fw-bold">SETTINGS</span>
-                </div>
-              ) : (
-                <div className="d-flex align-items-center gap-1 custom-hover">
-                  <i className="bi bi-gear fs-3"></i>
-                  <span className="fs-5">SETTINGS</span>
-                </div>
-              )}
-            </Link>
-            <Link
-              href={{ pathname: "/Faculty/ReportProblem" }}
-              className="text-decoration-none link-dark"
-            >
-              {path == "/Faculty/ReportProblem" ? (
-                <div className="d-flex align-items-center gap-1">
-                  <i className="bi bi-exclamation-triangle-fill fs-3"></i>
-                  <span className="fs-5 fw-bold">REPORT PROBLEM</span>
-                </div>
-              ) : (
-                <div className="d-flex align-items-center gap-1 custom-hover">
-                  <i className="bi bi-exclamation-triangle fs-3"></i>
+          {path != "/Faculty/Preset" && <>
+            <div className="d-flex flex-column text-light align-self-start custom-black-color">
+              <Link
+                href={{ pathname: "/Faculty/Settings" }}
+                className="text-decoration-none link-dark"
+              >
+                {path == "/Faculty/Settings" ? (
+                  <div className="d-flex align-items-center gap-1">
+                    <i className="bi bi-gear-fill fs-3"></i>
+                    <span className="fs-5 fw-bold">SETTINGS</span>
+                  </div>
+                ) : (
+                  <div className="d-flex align-items-center gap-1 custom-hover">
+                    <i className="bi bi-gear fs-3"></i>
+                    <span className="fs-5">SETTINGS</span>
+                  </div>
+                )}
+              </Link>
+              <Link
+                href={{ pathname: "/Faculty/ReportProblem" }}
+                className="text-decoration-none link-dark"
+              >
+                {path == "/Faculty/ReportProblem" ? (
+                  <div className="d-flex align-items-center gap-1">
+                    <i className="bi bi-exclamation-triangle-fill fs-3"></i>
+                    <span className="fs-5 fw-bold">REPORT PROBLEM</span>
+                  </div>
+                ) : (
+                  <div className="d-flex align-items-center gap-1 custom-hover">
+                    <i className="bi bi-exclamation-triangle fs-3"></i>
 
-                  <span className="fs-5">REPORT PROBLEM</span>
+                    <span className="fs-5">REPORT PROBLEM</span>
+                  </div>
+                )}
+              </Link>
+              <Link
+                href={{ pathname: "/Login" }}
+                className="text-decoration-none link-dark"
+                onClick={() => setTUPCID("")}
+              >
+                <div className="d-flex align-items-center gap-1 custom-hover">
+                  <i className="bi bi-power fs-3"></i>
+                  <span className="fs-5">LOGOUT</span>
                 </div>
-              )}
-            </Link>
-            <Link
-              href={{ pathname: "/Login" }}
-              className="text-decoration-none link-dark"
-              onClick={() => setTUPCID("")}
-            >
-              <div className="d-flex align-items-center gap-1 custom-hover">
-                <i className="bi bi-power fs-3"></i>
-                <span className="fs-5">LOGOUT</span>
-              </div>
-            </Link>
-          </div>
+              </Link>
+            </div>
+          </>}
+
         </div>
       </aside>
     </>

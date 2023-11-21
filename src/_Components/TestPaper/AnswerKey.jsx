@@ -82,7 +82,7 @@ export default function AnswerKey() {
           if (type && answers[index]) {
             const questionNumber = questionNumbers[index];
             const answer = answers[index];
-            const questionScore = score[index]; 
+            const questionScore = score[index];
 
             if (!acc[type]) {
               acc[type] = {
@@ -105,7 +105,7 @@ export default function AnswerKey() {
         }));
 
         setTestData(organizedDataArray);
-       
+
       } else {
         console.error("Error fetching data");
       }
@@ -127,7 +127,7 @@ export default function AnswerKey() {
     }, 0);
 
 
-    setTotalScore(total); 
+    setTotalScore(total);
   }, [testData]);
 
   const fetchStudentAnswers = async () => {
@@ -151,12 +151,12 @@ export default function AnswerKey() {
             if (type && answers[index]) {
               const questionNumber = questionNumbers[index];
               const answer = answers[index];
-            
-              
+
+
               if (!acc[type]) {
                 acc[type] = [];
               }
-              acc[type].push({ questionNumber, answer});
+              acc[type].push({ questionNumber, answer });
             }
             return acc;
           }, {});
@@ -187,7 +187,7 @@ export default function AnswerKey() {
   useEffect(() => {
     const calculateTotalScore2 = () => {
       let totalScore2 = 0;
-  
+
       studentAnswerData.forEach((answerSection, index) => {
         answerSection.answers.forEach((answer) => {
           const matchingTestSection = testData[index];
@@ -195,31 +195,31 @@ export default function AnswerKey() {
             const matchingQuestion = matchingTestSection.questions.find(
               (question) => question.questionNumber === answer.questionNumber
             );
-  
+
             if (matchingQuestion && matchingQuestion.answer === answer.answer) {
               totalScore2 += matchingQuestion.score;
             }
           }
         });
       });
-  
+
       setTotalScore2(totalScore2);
       const totalQuestions = testData.reduce((acc, testSection) => {
         return acc + testSection.questions.length; // Counting total questions
       }, 0);
-  
-      const wrongAnswers = totalQuestions - totalScore2; 
-      
+
+      const wrongAnswers = totalQuestions - totalScore2;
+
       setWrong(wrongAnswers)// Calculating wrong answers
-  
+
       console.log("Total Score 2:", totalScore2);
       console.log("Wrong Answers:", wrongAnswers);
     };
-  
+
     calculateTotalScore2();
   }, [studentAnswerData, testData])
 
-  
+
   useEffect(() => {
     let timerId;
 
@@ -246,32 +246,32 @@ export default function AnswerKey() {
       const response = await axios.put(
         `http://localhost:3001/updatestudentanswers/${studentid}/${uidfromtestpaper}`
       );
-  
+
       const { data: { updatedAnswers } } = response;
       console.log("updated answers:", updatedAnswers)
-  
+
       // Use the updated answers to post to another endpoint if needed
       const sendData = {
         TUPCID: studentid,
         UID: uidfromtestpaper,
         results: updatedAnswers,
         correct: totalScore2,
-        wrong: Wrong , 
+        wrong: Wrong,
         totalscore2: totalScore2,
         maxscore: totalScore
       };
-  
+
       const resultResponse = await axios.post('http://localhost:3001/sendanswertoresult', sendData);
-  
+
       console.log('Data sent to /sendanswertoresult endpoint:', resultResponse.data);
       setShowPopup(false);
     } catch (error) {
       console.error('Error sending data:', error);
     }
   };
-  
-  
-  
+
+
+
 
   const fetchStudentname = async () => {
     try {
@@ -294,12 +294,12 @@ export default function AnswerKey() {
     <main className="min-vh-100 w-100 p-2">
       <section>
         <div className="d-flex align-items-center">
-        <Link href="/Faculty/ListOfTest">
+          <Link href="/Faculty/ListOfTest">
             <i className="bi bi-arrow-left fs-3 custom-black-color "></i>
           </Link>
 
           <h3 className="m-0">
-          {sectionname}: {subject} - {semester}: {testname} UID: {uid}
+            {sectionname}: {subject} - {semester}: {testname} UID: {uid}
           </h3>
         </div>
         <ul className="d-flex flex-wrap justify-content-around mt-3 list-unstyled">
@@ -370,15 +370,15 @@ export default function AnswerKey() {
                   </ul>
                 </div>
               ))}
-              
+
             </div>
             <div className="col-6">
               <h5 className="m-0 text-center align-self-center">
                 TUPCID: {studentid}{" "}
               </h5>
               <h5 className="m-0 text-center align-self-center">
-              Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}
-            </h5>
+                Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}
+              </h5>
               <h5 className="m-0 text-center align-self-center">
                 STUDENT ANSWER
               </h5>
@@ -394,24 +394,24 @@ export default function AnswerKey() {
                         (question) => question.questionNumber === answer.questionNumber
                       );
 
-                    
+
                       const scoreOfStudent = matchingQuestion?.answer === answer.answer ? matchingQuestion.score : 0;
-                      const scoreText = scoreOfStudent === 0 ? 'INCORRECT' : 'CORRECT';
+                      const scoreText = scoreOfStudent === 0 ? "wrong" : "check";
 
                       return (
                         <li key={aIndex}>
                           {`${answer.questionNumber}. ${answer.answer} - ${scoreText}`}
                         </li>
                       );
-                      
+
                     })}
-                    
+
                   </ul>
                 </div>
               ))}
-            
+
             </div>
-          
+
           </form>
           <ImageInput onImageSelected={handleImageSelected} />
           <TextLocalization imageData={processedImageData} />
@@ -425,20 +425,39 @@ export default function AnswerKey() {
             onUIDDetected={handleUIDDetected}
           />
           {showPopup && (
-      <div className="popup">
-        <h2>Student Data</h2>
-        <p>TUPCID: {studentid}</p>
-        <p>Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}</p>
-        <p>Section Name: {sectionname}</p>
-        <p>Section Name: {testname}</p>
-        <p>Total Score: {totalScore2} / {totalScore}</p>
-        <button onClick={sendStudentData}>Send</button>
-        <button onClick={() => setShowPopup(false)}>Cancel</button>
-      </div>
-    )}
+            <div className="d-block modal" tabIndex="-1">
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content border-dark">
+                  <div className="modal-header">
+                    <h5 className="modal-title">SUMMARY</h5>
+                  </div>
+                  <div className="modal-body">
+                    <p className="text-center">
+                      <p>Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}</p>
+                      <p>Section Name: {sectionname}</p>
+                      <p>Test Name: {testname}</p>
+                      <p>Total Score: {totalScore2} / {totalScore}</p>
+                    </p>
+                  </div>
+                  <div className="modal-footer align-self-center">
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => setShowPopup(!showPopup)}
+                    >
+                      Cancel
+                    </button>
+                    <button className="btn btn-success" onClick={sendStudentData}>
+                      Send
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
-        </section>
-    
+      </section>
+
     </main>
   );
 }

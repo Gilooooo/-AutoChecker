@@ -12,6 +12,7 @@ function StudentTestList({ clicked, setClicked }) {
   const [testNameMap, setTestNameMap] = useState({});
   const [studentScores, setStudentScores] = useState([]);
   const [dropdown, setDropdown] = useState(false);
+  const [sorted, setSorted] = useState(false);
 
   const Join = async () => {
     try {
@@ -69,14 +70,33 @@ function StudentTestList({ clicked, setClicked }) {
     }
   };
 
+  const subject = () => {
+    const sortedList = [...testList].sort(
+      (a, b) => a.Section_Subject.localeCompare(b.Section_Subject)
+    );
+    setSorted(true);
+    setTestList(sortedList);
+  };
+
+  const course = () => {
+    const sortedList = [...testList].sort(
+      (a, b) => a.Section_Name.localeCompare(b.Section_Name)
+    );
+    setSorted(true);
+    setTestList(sortedList);
+  };
+
   useEffect(() => {
     const fetching = setInterval(() => {
+      if (sorted) {
+        return;
+      }
       fetchingStudentTest();
     }, 2000);
     return () => {
       clearInterval(fetching);
     };
-  }, [TUPCID]);
+  }, [TUPCID, sorted]);
 
   const handleclick = () => {
     setClicked(!clicked);
@@ -149,7 +169,9 @@ function StudentTestList({ clicked, setClicked }) {
                       type="button"
                       className="btn btn-primary"
                       data-bs-dismiss={
-                        message === "Section doesn't exist or wrong uid" ? " " : "modal"
+                        message === "Section doesn't exist or wrong uid"
+                          ? " "
+                          : "modal"
                       }
                       onClick={Join}
                     >
@@ -162,31 +184,28 @@ function StudentTestList({ clicked, setClicked }) {
             {/* End of Modal for Add test */}
           </div>
           <div className="d-sm-flex d-none gap-md-2 gap-1 position-absolute end-0 align-self-end">
-            <button
-              className="btn btn-outline-dark btn-sm"
-              onClick={() => console.log(testList)}
-            >
-              TEST NAME
-            </button>
-            <button
-              className="btn btn-outline-dark btn-sm"
-              onClick={() => console.log(testNameMap)}
-            >
+            <button className="btn btn-outline-dark btn-sm" onClick={subject}>
               SUBJECT
             </button>
-            <button className="btn btn-outline-dark btn-sm">COURSE</button>
-            <button className="btn btn-outline-dark btn-sm">STATUS</button>
+            <button className="btn btn-outline-dark btn-sm" onClick={course}>
+              COURSE
+            </button>
           </div>
         </div>
         <div className="row m-0 mt-2 col-12 gap-2">
           {testList.map((sections, index) => (
             <div key={index} className="p-0">
-              <h5 className="m-0 border border-dark py-2 text-center rounded mb-1 dropdown-toggle"
-               onClick={() => setDropdown(dropdown === index ? null : index)}
+              <h5
+                className="m-0 border border-dark py-2 text-center rounded mb-1 dropdown-toggle"
+                onClick={() => setDropdown(dropdown === index ? null : index)}
               >
                 {sections.Section_Uid} {sections.Section_Subject}
               </h5>
-              <div className={`${dropdown === index ? "d-flex": "d-none"} flex-column gap-2 py-2 px-3`}>
+              <div
+                className={`${
+                  dropdown === index ? "d-flex" : "d-none"
+                } flex-column gap-2 py-2 px-3`}
+              >
                 {/* Published test */}
                 {testNameMap
                   .filter((tests) => tests.Section_Uid === sections.Section_Uid)
@@ -194,27 +213,27 @@ function StudentTestList({ clicked, setClicked }) {
                     <div
                       className="p-1 px-3 border border-dark rounded col-12"
                       key={idx}
-                    > <Link
-                          href={{
-                            pathname: "/Student/Result",
-                            query: {
-                              studentid: TUPCID,
-                              uidoftest: Tests.Uid_Test,
-                            },
-                          }}
-                          className="link-dark text-decoration-none"
-                        >
-                      <h5 className="m-0 py-2">
-                        Test Uid: {Tests.Uid_Test} | Test Name:{" "}
-                        {Tests.TestName} |{" "}
-                        {studentScores && studentScores.length > idx
-                          ? `GRADED | ${studentScores[idx].TOTALSCORE} / ${studentScores[idx].MAXSCORE}`
-                          : "PENDING | Score not available"}
-                      </h5>
+                    >
+                      <Link
+                        href={{
+                          pathname: "/Student/Result",
+                          query: {
+                            studentid: TUPCID,
+                            uidoftest: Tests.Uid_Test,
+                          },
+                        }}
+                        className="link-dark text-decoration-none"
+                      >
+                        <h5 className="m-0 py-2">
+                          Test Uid: {Tests.Uid_Test} | Test Name:{" "}
+                          {Tests.TestName} |{" "}
+                          {studentScores && studentScores.length > idx
+                            ? `GRADED | ${studentScores[idx].TOTALSCORE} / ${studentScores[idx].MAXSCORE}`
+                            : "PENDING | Score not available"}
+                        </h5>
                       </Link>
                     </div>
                   ))}
-                
               </div>
             </div>
           ))}

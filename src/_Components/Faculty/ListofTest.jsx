@@ -41,21 +41,25 @@ function ListOfTest({ setClicked, clicked }) {
     ) {
       setMessage("");
       try {
-        const response = await axios.post(
-          "http://localhost:3001/TestList",
-          New
-        );
+        const response = await axios.get(`http://localhost:3001/CheckTestName?TestName=${TestName}`)
+        console.log(response.data)
         if (response.status === 200) {
-          fetchingTestList();
+          const response1 = await axios.post(
+            "http://localhost:3001/TestList",
+            New
+          );
+          if (response1.status === 200) {
+            fetchingTestList();
+          }
+          setSemester("");
+          setTestName("");
+          setSubject("");
+          setSection("");
+          setUid("");
         }
       } catch (err) {
-        throw err;
+        setMessage(err.response.data.message);
       }
-      setSemester("");
-      setTestName("");
-      setSubject("");
-      setSection("");
-      setUid("");
     } else {
       setMessage("Required to Fill up");
     }
@@ -362,7 +366,7 @@ function ListOfTest({ setClicked, clicked }) {
               </div>
             </div>
             {/* End of Modal for Add test */}
-            
+
           </div>
           <div className="dropdown align-self-center">
             <i
