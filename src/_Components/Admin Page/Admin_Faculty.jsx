@@ -100,23 +100,25 @@ const generateAuditLog = async () => {
               <table className="table-secondary table table-bordered border-secondary">
                 <thead>
                   <tr>
-                    <th scope="col">ID NO.</th>
+                    <th scope="col">ACCOUNT NO.</th>
                     <th scope="col">FIRSTNAME</th>
                     <th scope="col"> MIDDLENAME</th>
                     <th scope="col"> SURNAME</th>
                     <th scope="col"> SUBJECT DEPARTMENT</th>
-                    <th scope="col"> UID</th>
+                    <th scope="col"> GSFE ACCOUNT</th>
+                    <th scope="col"> REGISTERED DATE</th>
                   </tr>
                 </thead>
                 <tbody>
                   {newFacultyList.map((faculties, index) => (
                     <tr key={index}>
-                      <td scope="col">{index + 1}</td>
+                      <td scope="col">{faculties.TUPCID}</td>
                       <td scope="col">{faculties.FIRSTNAME}</td>
                       <td scope="col"> {faculties.MIDDLENAME}</td>
                       <td scope="col"> {faculties.SURNAME}</td>
                       <td scope="col"> {faculties.SUBJECTDEPT}</td>
-                      <td scope="col"> {faculties.uid}</td>
+                      <td scope="col"> {faculties.GSFEACC}</td>
+                      <td scope="col"> {faculties.REGISTEREDDATE}</td>
                     </tr>
                   ))}
                 </tbody>

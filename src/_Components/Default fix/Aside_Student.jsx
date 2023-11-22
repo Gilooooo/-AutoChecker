@@ -27,6 +27,8 @@ function Aside_Student({ clicked, setClicked }) {
       document.removeEventListener("click", handleOutsideClick);
     };
   }, [clicked]);
+
+
   const fetchAside = async () => {
     try {
       const response = await axios.get(
@@ -51,6 +53,39 @@ function Aside_Student({ clicked, setClicked }) {
       clearInterval(fetching);
     };
   }, [TUPCID]);
+
+ 
+
+  const submitForm = async () => {
+    try {
+      const data = {
+        TUPCID,
+        PROFILE: "student",
+        STATUS: "OFFLINE"
+      };
+  
+      const logoutResponse = await axios.post("http://localhost:3001/studentlogout", data);
+  
+      if (logoutResponse.status === 200) {
+        console.log("Logout successful");
+      } else {
+        console.log("Logout unsuccessful");
+      }
+    } catch (err) {
+      console.error("Error during logout:", err);
+      if (err.response && err.response.status === 404) {
+        // Handle specific error status code or error response
+        console.log(err.response.data.message);
+      } else {
+        // Handle other errors
+        throw err;
+      }
+    }
+  };
+  
+  
+
+
   return (
     <>
       <aside className="min-vh-100 custom-red position-relative">
@@ -142,7 +177,7 @@ function Aside_Student({ clicked, setClicked }) {
             >
               <div className="d-flex align-items-center gap-1 custom-hover">
                 <i className="bi bi-power fs-3"></i>
-                <span className="fs-5">LOGOUT</span>
+                <span className="fs-5" onClick={submitForm}>LOGOUT</span>
               </div>
             </Link>
           </div>

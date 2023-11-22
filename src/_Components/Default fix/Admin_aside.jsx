@@ -161,7 +161,7 @@ function AdminAside({ clicked, setClicked }) {
             </Link>
             <Link
               href={{ pathname: "/Login" }}
-              className="link-dark text-decoration-none"
+              className="text-decoration-none link-dark"
               onClick={() => setTUPCID("")}
             >
               <div className="d-flex align-items-center gap-1 custom-hover">

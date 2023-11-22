@@ -53,6 +53,33 @@ function Aside_Faculty({ clicked, setClicked }) {
     };
   }, [clicked]);
 
+
+  const submitForm = async () => {
+    try {
+      const data = {
+        TUPCID,
+        PROFILE: "faculty",
+        STATUS: "OFFLINE"
+      };
+  
+      const logoutResponse = await axios.post("http://localhost:3001/facultylogout", data);
+  
+      if (logoutResponse.status === 200) {
+        console.log("Logout successful");
+      } else {
+        console.log("Logout unsuccessful");
+      }
+    } catch (err) {
+      console.error("Error during logout:", err);
+      if (err.response && err.response.status === 404) {
+        // Handle specific error status code or error response
+        console.log(err.response.data.message);
+      } else {
+        // Handle other errors
+        throw err;
+      }
+    }
+  };
   return (
     <>
       <aside className="min-vh-100 custom-red position-relative">
@@ -146,7 +173,7 @@ function Aside_Faculty({ clicked, setClicked }) {
               >
                 <div className="d-flex align-items-center gap-1 custom-hover">
                   <i className="bi bi-power fs-3"></i>
-                  <span className="fs-5">LOGOUT</span>
+                  <span className="fs-5" onClick={submitForm}>LOGOUT</span>
                 </div>
               </Link>
             </div>

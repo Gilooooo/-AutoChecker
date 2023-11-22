@@ -19,24 +19,25 @@ export default function Records() {
   const [updatedRecords, setUpdatedRecords] = useState([]);
   const [warning, setWarning] = useState(false);
 
-  const fetchResult = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:3001/Studentscores/${uid}`
-      );
-
-      if (response.status === 200) {
-        const { studentlist } = response.data;
-        setRecordList(studentlist);
-      } else {
-        console.error("Failed to fetch student scores");
-      }
-    } catch (error) {
-      console.error("Error fetching student scores:", error);
-    }
-  };
-
   useEffect(() => {
+    const fetchResult = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3001/Studentscores/${uid}`);
+
+        if (response.status === 200) {
+          const { studentlist } = response.data;
+          // Sort the records by correct answers when fetched successfully
+          const sortedRecords = [...studentlist];
+          sortedRecords.sort((a, b) => b.CORRECT - a.CORRECT);
+          setRecordList(sortedRecords);
+        } else {
+          console.error("Failed to fetch student scores");
+        }
+      } catch (error) {
+        console.error("Error fetching student scores:", error);
+      }
+    };
+
     fetchResult();
   }, [uid]);
 
@@ -117,6 +118,7 @@ export default function Records() {
     }
   };
 
+  
   return (
     <main className="min-vh-100 p-2 w-100">
       <section className="h-50">

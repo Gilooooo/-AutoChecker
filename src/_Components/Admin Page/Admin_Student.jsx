@@ -91,12 +91,13 @@ function Admin_Student({ clicked, setClicked }) {
               <table className="table-secondary table table-bordered border-secondary">
                 <thead>
                   <tr>
-                    <th scope="col">ID NO.</th>
+                    <th scope="col">ACCOUNT NO.</th>
                     <th scope="col">FIRSTNAME</th>
                     <th scope="col"> MIDDLENAME</th>
                     <th scope="col"> SURNAME</th>
                     <th scope="col"> COURSE, SECTION & YEAR</th>
-                    <th scope="col"> UID</th>
+                    <th scope="col"> GSFE ACCOUNT</th>
+                    <th scope="col"> REGISTERED DATE</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -110,7 +111,8 @@ function Admin_Student({ clicked, setClicked }) {
                         {" "}
                         {students.COURSE}-{students.SECTION}-{students.YEAR}
                       </td>
-                      <td scope="col"> {students.uid}</td>
+                      <td scope="col"> {students.GSFEACC}</td>
+                      <td scope="col"> {students.REGISTEREDDATE}</td>
                     </tr>
                   ))}
                 </tbody>

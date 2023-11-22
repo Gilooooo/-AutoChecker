@@ -9,6 +9,8 @@ import TextLocalization from "./camera/textLocalization";
 import TextLocalization2 from "./camera/textlocalizationword";
 import ImageInput from "@/app/Faculty/Test/opencv/page";
 
+
+
 export default function AnswerKey() {
   const { TUPCID } = useTUPCID();
   const searchparams = useSearchParams();
@@ -33,7 +35,15 @@ export default function AnswerKey() {
   const [Wrong, setWrong] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
   const [students, setStudents] = useState([]);
+  const [totalScoreValue, setTotalScoreValue] = useState(0); 
 
+
+
+  useEffect(() => {
+    // Update totalScore with the value obtained from totalScoreValue state
+    setTotalScore(totalScoreValue);
+
+  }, [totalScoreValue]);
 
   const updateStudentId = (newStudentId) => {
     setStudentId(newStudentId);
@@ -76,6 +86,7 @@ export default function AnswerKey() {
           questionTypes,
           answers,
           score,
+          totalScoreValue
         } = response.data;
 
         const organizedData = questionTypes.reduce((acc, type, index) => {
@@ -105,6 +116,7 @@ export default function AnswerKey() {
         }));
 
         setTestData(organizedDataArray);
+        setTotalScoreValue(totalScoreValue);
 
       } else {
         console.error("Error fetching data");
@@ -118,17 +130,7 @@ export default function AnswerKey() {
     fetchQuestionData();
   }, []);
 
-  useEffect(() => {
-    // Calculate the total score when testData changes
-    const total = testData.reduce((acc, testSection) => {
-      return acc + testSection.questions.reduce((sum, question) => {
-        return sum + (parseInt(question.score) || 0); // Summing up scores for each question
-      }, 0);
-    }, 0);
 
-
-    setTotalScore(total);
-  }, [testData]);
 
   const fetchStudentAnswers = async () => {
     try {
@@ -187,7 +189,7 @@ export default function AnswerKey() {
   useEffect(() => {
     const calculateTotalScore2 = () => {
       let totalScore2 = 0;
-
+  
       studentAnswerData.forEach((answerSection, index) => {
         answerSection.answers.forEach((answer) => {
           const matchingTestSection = testData[index];
@@ -195,29 +197,28 @@ export default function AnswerKey() {
             const matchingQuestion = matchingTestSection.questions.find(
               (question) => question.questionNumber === answer.questionNumber
             );
-
+  
             if (matchingQuestion && matchingQuestion.answer === answer.answer) {
               totalScore2 += matchingQuestion.score;
             }
           }
         });
       });
-
+  
       setTotalScore2(totalScore2);
-      const totalQuestions = testData.reduce((acc, testSection) => {
-        return acc + testSection.questions.length; // Counting total questions
-      }, 0);
-
-      const wrongAnswers = totalQuestions - totalScore2;
-
-      setWrong(wrongAnswers)// Calculating wrong answers
-
+  
+      const wrongAnswers = totalScoreValue - totalScore2;
+  
+      setWrong(wrongAnswers);
+  
       console.log("Total Score 2:", totalScore2);
       console.log("Wrong Answers:", wrongAnswers);
     };
-
+  
     calculateTotalScore2();
-  }, [studentAnswerData, testData])
+  }, [studentAnswerData, testData, totalScoreValue]);
+  
+  
 
 
   useEffect(() => {
@@ -250,26 +251,32 @@ export default function AnswerKey() {
       const { data: { updatedAnswers } } = response;
       console.log("updated answers:", updatedAnswers)
 
+      const absoluteWrong = Math.abs(Wrong);
+
+
       // Use the updated answers to post to another endpoint if needed
       const sendData = {
         TUPCID: studentid,
         UID: uidfromtestpaper,
         results: updatedAnswers,
         correct: totalScore2,
-        wrong: Wrong,
+        wrong: absoluteWrong,
         totalscore2: totalScore2,
         maxscore: totalScore
       };
 
       const resultResponse = await axios.post('http://localhost:3001/sendanswertoresult', sendData);
 
-      console.log('Data sent to /sendanswertoresult endpoint:', resultResponse.data);
-      setShowPopup(false);
-    } catch (error) {
-      console.error('Error sending data:', error);
-    }
-  };
-
+        // Resetting states or clearing values after sending data
+    setStudentId(null);
+    setStudents([]);
+    setTotalScore(0);
+    setStudentAnswerData([]);
+    setShowPopup(false);
+  } catch (error) {
+    console.error('Error sending data:', error);
+  }
+};
 
 
 
@@ -364,7 +371,7 @@ export default function AnswerKey() {
                   <ul className="col-6 list-unstyled">
                     {testSection.questions.map((question, qIndex) => (
                       <li key={qIndex}>
-                        {`${question.questionNumber}. ${question.answer} - ${question.score}`}
+                        {`${question.questionNumber}. ${question.answer} `}
                       </li>
                     ))}
                   </ul>

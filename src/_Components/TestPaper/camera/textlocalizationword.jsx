@@ -75,10 +75,8 @@ function TextLocalization2({ imageData }) {
   };
 
   return (
-    <div>
-      
-        
-    </div>
+    <>
+    </>
   );
 }
 

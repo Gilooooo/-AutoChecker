@@ -82,8 +82,6 @@ export default function TestPaper() {
     generateTestPaperdoc(savedData);
   };
 
-  // Load data from localStorage when the component mounts
-
   const questionTypes = [
     { value: "MultipleChoice", label: "Multiple Choice" },
     { value: "TrueFalse", label: "True/False" },
@@ -203,7 +201,6 @@ export default function TestPaper() {
     }, [maxScore, fields]);
 
     const addNewField = () => {
-      console.log("field eme...", fieldTitleNumbers.length);
       if (fieldTitleNumbers.length > 2) {
         alert("Already reach the maximum type of test");
         return;
@@ -676,7 +673,6 @@ export default function TestPaper() {
         console.log("DATA SENDING....", updatedSavedValues);
 
         if (savedData.length > 0) {
-        
           const response1 = await axios.put(
             `http://localhost:3001/updatetestpaper/${TUPCID}/${uid}/${sectionname}`,
             {
@@ -697,7 +693,9 @@ export default function TestPaper() {
             }
           );
           if (updatequestions.status === 200) {
-            alert("Questions updated successfully. You can access it on PRESETS button");
+            alert(
+              "Questions updated successfully. You can access it on PRESETS button"
+            );
           } else {
             alert("Error updating data. Please try again.");
           }
@@ -732,11 +730,12 @@ export default function TestPaper() {
           );
 
           if (savequestions.status === 200) {
-            alert("Questions save successfully. You may now access it on PRESETS button");
+            alert(
+              "Questions save successfully. You may now access it on PRESETS button"
+            );
           } else {
             alert("Error updating data. Please try again.");
           }
-
         }
         setTimeout(() => {
           setErrorMessage("");
@@ -749,30 +748,30 @@ export default function TestPaper() {
       }
     };
 
-    
     const openPresetPage = () => {
       // Define the URL of the Preset page
-      const presetPageUrl = '/Faculty/Preset';
-  
+      const presetPageUrl = "/Faculty/Preset";
+
       // Open the Preset page in a new tab/window with specific dimensions
-      const newWindow = window.open(presetPageUrl, '_blank', 'toolbar=0,location=0,status=0,menubar=0,scrollbars=1,width=200,height=1200,top=100,left=1080');
+      const newWindow = window.open(
+        presetPageUrl,
+        "_blank",
+        "toolbar=0,location=0,status=0,menubar=0,scrollbars=1,width=200,height=1200,top=100,left=1080"
+      );
       if (newWindow) {
         newWindow.focus();
       }
     };
     return (
       <div className="d-flex flex-column justify-content-center align-items-center container-sm col-lg-8 col-11 border border-dark rounded py-2">
-        <div className="fixed-bottom d-flex justify-content-end p-3">
-        <button className="btn btn-dark btn-lg" onClick={openPresetPage}>
-          PRESET
-      </button>
-      </div>
-      
+        <div className="position-absolute bottom-0 end-0 p-3">
+          <button className="btn btn-dark btn-lg" onClick={openPresetPage}>
+            PRESET
+          </button>
+        </div>
+
         {fields.map((field, index) => (
-          <fieldset
-            className="row col-12 justify-content-center"
-            key={index}
-          >
+          <fieldset className="row col-12 justify-content-center" key={index}>
             <legend className="p-0">
               TYPE {fieldTitleNumbers[index]}
               <p>
@@ -780,7 +779,7 @@ export default function TestPaper() {
               </p>
               <label>TOTAL SCORE:</label>&nbsp;
               <input
-              className="rounded border border-dark text-center"
+                className="rounded border border-dark text-center"
                 type="number"
                 placeholder="Max Score (1-100)"
                 value={maxScore}
@@ -789,7 +788,7 @@ export default function TestPaper() {
                 max="100"
               />
             </legend>
-            
+
             <div className="row align-items-center p-0">
               <span className="col-2 p-0 ">TYPE OF TEST:</span>
 
@@ -889,7 +888,7 @@ export default function TestPaper() {
                     />
                   </div>
                 ))}
-          
+
                 <div className="d-flex gap-2 mb-1">
                   <button
                     onClick={() => addRadioOption(index)}
@@ -1129,10 +1128,7 @@ export default function TestPaper() {
         </div>
         {errorMessage && <p className="error-message">{errorMessage}</p>}
         <div className="d-flex gap-2">
-          <button
-            className="btn btn-outline-dark"
-            onClick={addNewField}
-          >
+          <button className="btn btn-outline-dark" onClick={addNewField}>
             Add New Type
           </button>
           <button
@@ -1147,7 +1143,7 @@ export default function TestPaper() {
             Save All
           </button>
         </div>
-        
+
         <div className="d-flex flex-column mt-2">
           <div className="d-flex gap-2">
             <input type="checkbox" id="generateWord" />
@@ -1157,11 +1153,9 @@ export default function TestPaper() {
             <input type="checkbox" id="generatePDF" />{" "}
             <label>Generate PDF</label>
           </div>
-        </div>
-
-        <div className="d-flex gap-1 mt-1">
+          
           <button
-            className="btn btn-outline-dark"
+            className="btn btn-outline-dark mt-1"
             onClick={handleSaveToDocsAndPDF}
           >
             Download File
@@ -1172,7 +1166,7 @@ export default function TestPaper() {
   };
 
   return (
-    <main className="w-100 min-vh-100 overflow-hidden p-2">
+    <main className="position-relative w-100 min-vh-100 overflow-hidden p-2">
       <section>
         <div className="d-flex align-items-center">
           <Link href="/Faculty/ListOfTest">
@@ -1193,7 +1187,7 @@ export default function TestPaper() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                subject: subject
+                subject: subject,
               },
             }}
             className="text-decoration-none link-dark"
@@ -1208,7 +1202,7 @@ export default function TestPaper() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                subject: subject
+                subject: subject,
               },
             }}
             className="text-decoration-none link-dark"
@@ -1223,7 +1217,7 @@ export default function TestPaper() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                subject: subject
+                subject: subject,
               },
             }}
             className="text-decoration-none link-dark"

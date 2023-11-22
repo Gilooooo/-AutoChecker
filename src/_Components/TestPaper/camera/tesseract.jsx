@@ -149,12 +149,9 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
   
     // Set the flag to indicate that data has been sent
     hasSentDataRef.current = true;
-  
     setIsSendingData(true);
   
     try {
-      
-  
       // Combine information from all images into a single set of data
       const formattedQuestionTypes = textDataArray.flatMap((data) =>
         data.questionType.map((type, index) => ({
@@ -177,27 +174,27 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
           }))
         );
   
-      // Perform a POST request to add data
-      await axios.post('http://localhost:3001/results', {
-        TUPCID,
-        UID,
-        questionType: formattedQuestionTypes,
-        answers: answersByImage,
-      });
-  
-     
-      const response = await axios.get(`http://localhost:3001/resultsexist/${UID}`);
-  
-      if (response.status === 200) {
+        const existCheckResponse = await axios.get(`http://localhost:3001/resultsexist/${UID}/${TUPCID}`);
+
+        if (existCheckResponse.status === 200) {
+          const count = existCheckResponse.data.count;
         
-        await axios.put(`http://localhost:3001/updateresults/${TUPCID}`, {
-          questionType: formattedQuestionTypes,
-          answers: answersByImage,
-        });
-      } else if (response.status === 404) {
-       
-        console.log('Data does not exist yet.');
-      }
+          if (count === 0) {
+            // If count is 0, trigger the insertion action
+            await axios.post(`http://localhost:3001/results`, {
+              TUPCID,
+              UID,
+              questionType: formattedQuestionTypes,
+              answers: answersByImage,
+            });
+          } else if (count > 0) {
+            // If count is 1, trigger the update action
+            await axios.put(`http://localhost:3001/updateresults/${TUPCID}`, {
+              questionType: formattedQuestionTypes,
+              answers: answersByImage,
+            });
+          }
+        }
   
       setLoadingProgress(100);
       setLoadingText('COMPLETE');
@@ -217,6 +214,8 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
       setAllImagesProcessed(false); // Reset the all images processed flag
     }
   };
+  
+  
   
 
   useEffect(() => {
