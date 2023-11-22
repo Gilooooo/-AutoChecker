@@ -1,9 +1,10 @@
 "use client";
 import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
 import Records from "@/_Components/TestPaper/Records";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
-export default function RecordsPage() {
+function RecordsPage() {
   const [clicked, setClicked] = useState(false);
   return (
     <div className="d-flex">
@@ -12,3 +13,4 @@ export default function RecordsPage() {
     </div>
   );
 }
+export default Authenticate(RecordsPage)

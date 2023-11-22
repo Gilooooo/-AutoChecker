@@ -1,6 +1,7 @@
 "use client";
 import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
 import StudentsList from "@/_Components/Faculty/StudentsList";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
 function SectionStudents(){
@@ -14,4 +15,4 @@ function SectionStudents(){
         </>
     )
 };
-export default SectionStudents;
+export default Authenticate(SectionStudents);

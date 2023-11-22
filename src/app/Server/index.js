@@ -285,6 +285,7 @@ app.post("/FacultyRegister", async (req, res) => {
 //Login for student and Faculty
 app.post("/Login", async (req, res) => {
   const { Tupcid, Password } = req.body;
+
   try {
     const studentLoginResult = await checkType(
       "student",
@@ -299,13 +300,47 @@ app.post("/Login", async (req, res) => {
       "faculty"
     );
 
+    let accountType = '';
+
     if (studentLoginResult.accountType === "student") {
       res.json({ accountType: "student", Uid: studentLoginResult.uid });
+      accountType = "student"; // Set account type for insertion
     } else if (facultyLoginResult.accountType === "faculty") {
       res.json({ accountType: "faculty", Uid: facultyLoginResult.uid });
+      accountType = "faculty"; // Set account type for insertion
     } else {
       res.status(404).json({ message: "Account does not exist" });
+      return; 
     }
+
+    // Set other data for insertion
+    const TUPCID = Tupcid; 
+    const PROFILE = accountType; 
+    const STATUS = 'ONLINE'; 
+    const TIMESTAMP = new Date();
+
+    // Check if there's a record with the same TUPCID and STATUS 'ONLINE'
+    const checkOnlineStatusQuery = 'SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?';
+    const checkOnlineStatusValues = [TUPCID, STATUS];
+    const [existingOnlineRecord] = await connection.query(checkOnlineStatusQuery, checkOnlineStatusValues);
+
+    if (existingOnlineRecord.length > 0) {
+      // If the record with 'ONLINE' status exists, update its timestamp
+      const updateLoginLogQuery = 'UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?';
+      const updateLoginLogValues = [TIMESTAMP, TUPCID, STATUS];
+      await connection.query(updateLoginLogQuery, updateLoginLogValues);
+    } else {
+      // Insert into login_log table if no 'ONLINE' record exists
+      const loginLogQuery = 'INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+      const loginLogValues = [TUPCID, PROFILE, STATUS, TIMESTAMP];
+      await connection.query(loginLogQuery, loginLogValues);
+    }
+
+    // Insert into overalllogin_log table
+    const overallLoginLogQuery = 'INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+    const overallLoginLogValues = [TUPCID, PROFILE, STATUS, TIMESTAMP];
+    await connection.query(overallLoginLogQuery, overallLoginLogValues);
+
   } catch (error) {
     console.error("Error during login:", error);
     res
@@ -313,6 +348,11 @@ app.post("/Login", async (req, res) => {
       .json({ message: "An error occurred. Please try again later." });
   }
 });
+
+
+
+
+
 //Admin Login
 app.post("/AdminLogin", async (req, res) => {
   const { Account_Number, Password } = req.body;
@@ -414,18 +454,53 @@ app.get("/StudentAside", async (req, res) => {
 app.get("/Admin_Students", async (req, res) => {
   try {
     const query = "SELECT * FROM student_accounts";
-    const [row] = await connection.query(query);
-    return res.status(200).json(row);
+    const [rows] = await connection.query(query);
+
+    // Modify the date format for each row
+    const formattedRows = rows.map(row => {
+      
+      const date = new Date(row.REGISTEREDDATE);
+      const formattedDate = date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      
+      return {
+        ...row,
+        REGISTEREDDATE: formattedDate
+      };
+    });
+    
+    return res.status(200).json(formattedRows);
   } catch (err) {
     return res.status(500).send({ message: "Internal server error" });
   }
 });
+
+
+
 //Faculty
 app.get("/Admin_Faculty", async (req, res) => {
   try {
     const query = "SELECT * FROM faculty_accounts";
     const [row] = await connection.query(query);
-    return res.status(200).json(row);
+    const formattedRows = row.map(row => {
+      
+      const date = new Date(row.REGISTEREDDATE);
+      const formattedDate = date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      
+      return {
+        ...row,
+        REGISTEREDDATE: formattedDate
+      };
+    });
+    
+    return res.status(200).json(formattedRows); 
   } catch (err) {
     return res.status(500).send({ message: "Internal server error" });
   }
@@ -740,11 +815,11 @@ app.get("/StudentSectionList", async (req, res) => {
 
     const uidSections = row.map((section) => section.Section_Uid);
     const subjectsections = row.map((subject) => subject.Section_Subject);
-    console.log(subjectsections);
+
     const examUIDQuery = "SELECT * FROM publish_test WHERE Section_Uid IN (?) AND Subject IN (?)";
     const [examRows] = await connection.query(examUIDQuery, [uidSections, subjectsections]);
 
-      console.log(examRows)
+    
     if (examRows.length === 0) {
       return res.status(404).send({ message: "No published tests found for the enrolled sections" });
     }
@@ -1135,6 +1210,7 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
     `;
 
     const [testdata] = await connection.query(query, [uid]);
+    console.log("testdata: ", testdata)
 
     // Extract the questions, test_number, and test_name from the database response
     const questionsData = testdata[0].questions;
@@ -2054,7 +2130,7 @@ app.get('/getquestionstypeandnumberandanswer/:uid', async (req, res) => {
         totalScoreValue
       };
 
-    
+      console.log("totalscore: ", responseData)
       res.status(200).json(responseData);
     } else {
       console.log("Test data not found for UID:", uid);
@@ -2095,37 +2171,35 @@ app.post('/results', async (req, res) => {
   }
 });
 
-app.get('/resultsexist/:UID', async (req, res) => {
+app.get('/resultsexist/:UID/:TUPCID', async (req, res) => {
   try {
-    const {  UID } = req.params;
+    const { UID, TUPCID } = req.params;
 
-    console.log("uid", UID)
-    // Check if the TUPCID and UID exist in the results table
     const query = `
-      SELECT TUPCID, UID FROM results WHERE UID = ?
+      SELECT COUNT(*) AS count 
+      FROM results 
+      WHERE UID = ? AND TUPCID = ? AND UID IS NOT NULL AND TUPCID IS NOT NULL
     `;
 
-    const values = [
-      UID || null,
-    ];
+    const values = [UID || null, TUPCID || null];
 
     const result = await connection.query(query, values);
 
-    if (result.length > 0) {
-      console.log("TUPCID CHECKS: ", result)
-      res.status(200).json({ message: 'TUPCID and UID exist in the database' });
+    if (result && result.length > 0) {
+      const count = result[0].count !== undefined ? result[0].count : 0;
 
+      res.status(200).json({ count });
     } else {
-     
-      res.status(404).json({ message: 'TUPCID and UID not found in the database' });
-
- 
+      res.status(200).json({ count: 0 });
     }
   } catch (error) {
     console.error('Error checking data in the database:', error);
     res.status(500).json({ error: 'Internal Server Error', message: error.message });
   }
 });
+
+
+
 
 app.put('/updateresults/:TUPCID', async (req, res) => {
   try {
@@ -2159,12 +2233,14 @@ app.get('/getstudentanswers/:studentid/:uid', async (req, res) => {
   const { studentid, uid } = req.params;
 
   try {
-    // Construct the SQL query to retrieve the student answers data
+    // Construct the SQL query to retrieve the student answers data with the latest timestamp
     const query = `
-    SELECT answers
-    FROM results
-    WHERE TUPCID = ? AND UID = ?;
-  `;
+      SELECT answers
+      FROM results
+      WHERE TUPCID = ? AND UID = ?
+      ORDER BY results_takendate DESC
+      LIMIT 1; -- Limit to retrieve the latest record
+    `;
 
     // Execute the query with the provided parameters
     const [studentAnswerData] = await connection.query(query, [studentid, uid]);
@@ -2182,7 +2258,7 @@ app.get('/getstudentanswers/:studentid/:uid', async (req, res) => {
 
       // Construct the response object with student answers
       const responseData = {  
-        questionNumbers,questionTypes, answers
+        questionNumbers, questionTypes, answers
       };
       console.log("check response:", responseData)
       res.status(200).json(responseData);
@@ -2195,6 +2271,7 @@ app.get('/getstudentanswers/:studentid/:uid', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 app.get("/Studentname/:TUPCID", async (req, res) => {
   const { TUPCID } = req.params;
@@ -2323,38 +2400,35 @@ app.post('/sendanswertoresult', async (req, res) => {
 
 app.get("/Studentscores/:uid", async (req, res) => {
   const { uid } = req.params;
-  console.log("Received UID:", uid); // Log UID to check if it's received correctly
+  console.log("Received UID:", uid);
 
   try {
-    const query = "SELECT TUPCID, TOTALSCORE, MAXSCORE, CORRECT, WRONG FROM student_results WHERE UID = ?";
+    const query = `
+      SELECT sr.TUPCID, sr.TOTALSCORE, sr.MAXSCORE, sr.CORRECT, sr.WRONG, sa.FIRSTNAME, sa.SURNAME
+      FROM student_results sr
+      JOIN student_accounts sa ON sr.TUPCID = sa.TUPCID
+      WHERE sr.UID = ? AND sr.results_out = (
+        SELECT MAX(results_out)
+        FROM student_results
+        WHERE TUPCID = sr.TUPCID
+      )
+    `;
+
     const [studentScores] = await connection.query(query, [uid]);
 
     if (studentScores.length > 0) {
-      const studentlist = [];
+      const studentlist = studentScores.map(result => ({
+        TUPCID: result.TUPCID,
+        FIRSTNAME: result.FIRSTNAME,
+        SURNAME: result.SURNAME,
+        TOTALSCORE: result.TOTALSCORE,
+        CORRECT: result.CORRECT,
+        WRONG: result.WRONG,
+        MAXSCORE: result.MAXSCORE
+      }));
 
-      for (const result of studentScores) {
-        const { TUPCID, TOTALSCORE, MAXSCORE, CORRECT, WRONG } = result;
+      console.log("studentlist:", studentlist);
 
-        const studentDataQuery = "SELECT FIRSTNAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
-        const [studentData] = await connection.query(studentDataQuery, [TUPCID]);
-
-        if (studentData.length > 0) {
-          const { FIRSTNAME, SURNAME } = studentData[0];
-          studentlist.push({
-            TUPCID,
-            FIRSTNAME,
-            SURNAME,
-            TOTALSCORE,
-            CORRECT,
-            WRONG,
-            MAXSCORE
-          });
-        }
-      }
-
-      console.log("studentlist:", studentlist); // Log the fetched studentlist
-
-      // Send the response after mapping all the results
       return res.status(200).send({ studentlist });
     } else {
       return res.status(404).send({ message: "Student scores not found" });
@@ -2364,6 +2438,7 @@ app.get("/Studentscores/:uid", async (req, res) => {
     return res.status(500).send({ message: "Failed to fetch student scores" });
   }
 });
+
 
 
 app.get("/Studentname2/:studentid", async (req, res) => {
@@ -2427,34 +2502,41 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
 
-    // Fetch student scores data
-    const query = "SELECT TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out FROM student_results WHERE UID = ?";
-    const [studentScores] = await connection.query(query, [uid]);
+    // Fetch student scores data with the latest record for each TUPCID
+    const query = `
+      SELECT sr.TUPCID, sr.CORRECT, sr.WRONG, sr.TOTALSCORE, sr.MAXSCORE, sr.results_out,
+             sa.FIRSTNAME, sa.SURNAME
+      FROM student_results sr
+      JOIN (
+        SELECT TUPCID, MAX(results_out) AS latest_result
+        FROM student_results
+        WHERE UID = ?
+        GROUP BY TUPCID
+      ) latest ON sr.TUPCID = latest.TUPCID AND sr.results_out = latest.latest_result
+      JOIN student_accounts sa ON sr.TUPCID = sa.TUPCID
+      WHERE sr.UID = ?
+    `;
+    
+    const [studentScores] = await connection.query(query, [uid, uid]);
 
     if (studentScores.length > 0) {
       const studentlist = [];
       let idCounter = 1; // Initialize the counter for id
 
       for (const result of studentScores) {
-        const { TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out } = result;
+        const { TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out, FIRSTNAME, SURNAME } = result;
 
-        const studentDataQuery = "SELECT FIRSTNAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
-        const [studentData] = await connection.query(studentDataQuery, [TUPCID]);
-
-        if (studentData.length > 0) {
-          const { FIRSTNAME, SURNAME } = studentData[0];
-          studentlist.push({
-            id: idCounter++, // Increment the counter for each record
-            TUPCID,
-            FIRSTNAME,
-            SURNAME,
-            TOTALSCORE,
-            CORRECT,
-            WRONG,
-            MAXSCORE,
-            results_out
-          });
-        }
+        studentlist.push({
+          id: idCounter++, // Increment the counter for each record
+          TUPCID,
+          FIRSTNAME,
+          SURNAME,
+          TOTALSCORE,
+          CORRECT,
+          WRONG,
+          MAXSCORE,
+          results_out
+        });
       }
 
       // Generate Excel content using studentlist data
@@ -2486,12 +2568,9 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
         const date = new Date(record.results_out);
 
         const formattedDate = date.toLocaleString('en-US', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
         });
 
         sheet.setCell(`I${rowIndex}`, formattedDate);
@@ -2539,6 +2618,111 @@ app.put('/updateTotalScore/:TUPCID', async (req, res) => {
 
 
 //auditlogstart here
+app.get('/generateloginaudit', async (req, res) => {
+  try {
+    const [loginRecords] = await connection.query('SELECT TUPCID, PROFILE, STATUS, TIMESTAMP FROM overalllogin_log');
+
+    // Create a map to store login and logout times based on TUPCID
+    const loginLogoutMap = {};
+
+    loginRecords.forEach(({ TUPCID, PROFILE, STATUS, TIMESTAMP }) => {
+      if (!loginLogoutMap[TUPCID]) {
+        loginLogoutMap[TUPCID] = { profile: PROFILE };
+      }
+
+      if (STATUS === 'ONLINE') {
+        loginLogoutMap[TUPCID].loginTime = TIMESTAMP;
+      } else if (STATUS === 'OFFLINE') {
+        loginLogoutMap[TUPCID].logoutTime = TIMESTAMP;
+      }
+    });
+
+    // Format login and logout times to date and time strings
+    const adminList = Object.keys(loginLogoutMap).map((TUPCID, index) => {
+      const { loginTime, logoutTime, profile } = loginLogoutMap[TUPCID];
+
+      const formattedLoginDate = loginTime ? new Date(loginTime).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }) : null;
+      const formattedLoginTime = loginTime ? new Date(loginTime).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: true,
+      }) : null;
+
+      const formattedLogoutDate = logoutTime ? new Date(logoutTime).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }) : null;
+      const formattedLogoutTime = logoutTime ? new Date(logoutTime).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: true,
+      }) : null;
+
+      return {
+        id: index + 1,
+        TUPCID,
+        PROFILE: profile,
+        loginDate: formattedLoginDate,
+        loginTime: formattedLoginTime,
+        logoutDate: formattedLogoutDate,
+        logoutTime: formattedLogoutTime,
+      };
+    });
+
+    // Create a new Excel document
+    const officegen = require('officegen');
+    let xlsx = officegen('xlsx');
+    let sheet = xlsx.makeNewSheet();
+    sheet.name = 'AdminAuditLog';
+
+    // Add headers to the sheet
+    sheet.data[0] = [
+      'No.',
+      'ID ACCOUNT',
+      'PROFILE',
+      'LOGIN TIME',
+      'LOGOUT TIME',
+      'DATE',
+    ];
+
+    // Add data to the sheet
+    adminList.forEach((admin, index) => {
+      sheet.data[index + 1] = [
+        admin.id,
+        admin.TUPCID,
+        admin.PROFILE,
+        admin.loginTime || 'N/A',
+        admin.logoutTime || 'N/A',
+        admin.loginDate || 'N/A',
+      ];
+    });
+
+    // Set headers for response
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="AdminAuditLog.xlsx"');
+
+    // Generate the Excel file and send it in the response
+    xlsx.generate(res);
+
+    console.log('Excel file generation initiated for Admin Audit Log');
+  } catch (error) {
+    console.error('Error generating Excel file:', error);
+    res.status(500).send('Error generating Excel file');
+  }
+});
+
+
+
+
+
+
 
 app.get('/generatefacultylog', async (req, res) => {
   try {
@@ -2550,12 +2734,9 @@ app.get('/generatefacultylog', async (req, res) => {
     rows.forEach((faculty, index) => {
       const date = new Date(faculty.REGISTEREDDATE);
       const formattedDate = date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
       });
 
       facultyList.push({
@@ -2659,12 +2840,9 @@ app.get('/generatetestlistlog', async (req, res) => {
       
       const date = new Date(record.date_created); // Assuming date_created is in 'YYYY-MM-DD HH:MM:SS' format
       const formattedDate = date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
       });
       
       sheet.setCell(`M${rowIndex}`, formattedDate); // Add formatted date to the sheet
@@ -2693,12 +2871,9 @@ app.get('/generatestudentlistlog', async (req, res) => {
     const studentList = rows.map((student, index) => {
       const date = new Date(student.REGISTEREDDATE); 
       const formattedDate = date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
       });
 
       return {
@@ -2859,6 +3034,227 @@ app.get("/PresetQuestions", async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+
+
+//logout
+
+
+app.post('/studentlogout', async (req, res) => {
+  const { TUPCID, PROFILE, STATUS } = req.body;
+  const TIMESTAMP = new Date();
+
+  try {
+   
+    const query = 'SELECT TUPCID FROM student_accounts WHERE uid = ?';
+    const [studentData] = await connection.query(query, [TUPCID]);
+
+    if (studentData.length > 0) {
+      const actualTUPCID = studentData[0].TUPCID;
+
+      
+      const checkOfflineStatusQuery = 'SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?';
+      const checkOfflineStatusValues = [actualTUPCID, STATUS];
+      const [existingOfflineRecord] = await connection.query(checkOfflineStatusQuery, checkOfflineStatusValues);
+
+      if (existingOfflineRecord.length > 0) {
+      
+        const updateLoginLogQuery = 'UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?';
+        const updateLoginLogValues = [TIMESTAMP, actualTUPCID, STATUS];
+        await connection.query(updateLoginLogQuery, updateLoginLogValues);
+      } else {
+      
+        const loginLogQuery = 'INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+        const loginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
+        await connection.query(loginLogQuery, loginLogValues);
+
+        const overallLoginLogQuery = 'INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+        const overallLoginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
+        await connection.query(overallLoginLogQuery, overallLoginLogValues);
+      }
+
+    
+      res.status(200).json({ message: 'Logout successful' });
+    } else {
+    
+      res.status(404).json({ message: 'Invalid TUPCID' });
+    }
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ message: 'An error occurred during logout' });
+  }
+});
+
+
+app.post('/facultylogout', async (req, res) => {
+  const { TUPCID, PROFILE, STATUS } = req.body;
+  const TIMESTAMP = new Date();
+
+  try {
+   
+    const query = 'SELECT TUPCID FROM faculty_accounts WHERE uid = ?';
+    const [facultyData] = await connection.query(query, [TUPCID]);
+
+    if (facultyData.length > 0) {
+      const actualTUPCID = facultyData[0].TUPCID;
+
+      
+      const checkOfflineStatusQuery = 'SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?';
+      const checkOfflineStatusValues = [actualTUPCID, STATUS];
+      const [existingOfflineRecord] = await connection.query(checkOfflineStatusQuery, checkOfflineStatusValues);
+
+      if (existingOfflineRecord.length > 0) {
+      
+        const updateLoginLogQuery = 'UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?';
+        const updateLoginLogValues = [TIMESTAMP, actualTUPCID, STATUS];
+        await connection.query(updateLoginLogQuery, updateLoginLogValues);
+      } else {
+      
+        const loginLogQuery = 'INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+        const loginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
+        await connection.query(loginLogQuery, loginLogValues);
+
+        const overallLoginLogQuery = 'INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+        const overallLoginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
+        await connection.query(overallLoginLogQuery, overallLoginLogValues);
+      }
+
+    
+      res.status(200).json({ message: 'Logout successful' });
+    } else {
+    
+      res.status(404).json({ message: 'Invalid TUPCID' });
+    }
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ message: 'An error occurred during logout' });
+  }
+});
+
+
+
+//ADMIN DASHBOARD
+
+
+app.get('/getstudentrecords', async (req, res) => {
+  try {
+    const query = 'SELECT * FROM student_accounts';
+    const [studentRecords] = await connection.query(query);
+
+    // Format the REGISTEREDDATE field for each record
+    const formattedStudentRecords = studentRecords.map((record) => {
+      const formattedDate = new Date(record.REGISTEREDDATE).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      return {
+        ...record,
+        REGISTEREDDATE: formattedDate,
+      };
+    });
+
+    res.status(200).json(formattedStudentRecords);
+  } catch (error) {
+    console.error('Error fetching student records:', error);
+    res.status(500).json({ message: 'An error occurred while fetching student records' });
+  }
+});
+
+
+app.get('/getfacultyrecords', async (req, res) => {
+  try {
+    const query = 'SELECT * FROM faculty_accounts';
+    const [facultyRecords] = await connection.query(query);
+
+    // Format the REGISTEREDDATE field for each record
+    const formattedFacultyRecords = facultyRecords.map((record) => {
+      const formattedDate = new Date(record.REGISTEREDDATE).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      return {
+        ...record,
+        REGISTEREDDATE: formattedDate,
+      };
+    });
+
+
+    res.status(200).json(formattedFacultyRecords);
+  } catch (error) {
+    console.error('Error fetching faculty records:', error);
+    res.status(500).json({ message: 'An error occurred while fetching faculty records' });
+  }
+});
+
+
+app.get('/getlogin', async (req, res) => {
+  try {
+    const query = 'SELECT * FROM login_log';
+    const [loginRecords] = await connection.query(query);
+
+    // Create a map to store login and logout times based on TUPCID
+    const loginLogoutMap = {};
+
+    loginRecords.forEach(({ TUPCID, STATUS, TIMESTAMP }) => {
+      if (STATUS === 'ONLINE') {
+        loginLogoutMap[TUPCID] = { loginTime: TIMESTAMP };
+      } else if (STATUS === 'OFFLINE' && loginLogoutMap[TUPCID]) {
+        loginLogoutMap[TUPCID].logoutTime = TIMESTAMP;
+      }
+    });
+
+    // Format login and logout times to 12-hour format
+    const formattedData = Object.keys(loginLogoutMap).map((TUPCID) => {
+      const loginDateTime = new Date(loginLogoutMap[TUPCID].loginTime);
+      const logoutDateTime = loginLogoutMap[TUPCID].logoutTime
+        ? new Date(loginLogoutMap[TUPCID].logoutTime)
+        : null;
+
+      const loginDate = loginDateTime.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const loginTime = loginDateTime.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: true,
+      });
+
+      const logoutDate = logoutDateTime
+        ? logoutDateTime.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })
+        : null;
+      const logoutTime = logoutDateTime
+        ? logoutDateTime.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: true,
+          })
+        : null;
+
+      return {
+        TUPCID,
+        loginDate,
+        loginTime,
+        logoutDate,
+        logoutTime,
+      };
+    });
+   
+    res.status(200).json(formattedData);
+  } catch (error) {
+    console.error('Error fetching login records:', error);
+    res.status(500).json({ message: 'An error occurred while fetching login records' });
   }
 });
 

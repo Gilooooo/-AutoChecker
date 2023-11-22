@@ -1,6 +1,7 @@
 "use client"
 import Admin_Faculty from "@/_Components/Admin Page/Admin_Faculty";
 import AdminAside from "@/_Components/Default fix/Admin_aside";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
 function Faculty_Page() {
@@ -14,4 +15,4 @@ function Faculty_Page() {
     </>
   );
 }
-export default Faculty_Page;
+export default Authenticate(Faculty_Page);

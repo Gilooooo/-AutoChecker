@@ -1,6 +1,7 @@
 "use client";
 import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
 import FacultyReportProblem from "@/_Components/Report Problem/FacultyReportProblem";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
 function FacultyReportProblemPage(){
@@ -14,4 +15,4 @@ function FacultyReportProblemPage(){
         </>
     )
 };
-export default FacultyReportProblemPage;
+export default Authenticate(FacultyReportProblemPage);

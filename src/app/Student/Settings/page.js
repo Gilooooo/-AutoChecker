@@ -1,6 +1,7 @@
 "use client"
 import Aside_Student from "@/_Components/Default fix/Aside_Student";
 import StudentSettings from "@/_Components/Settings/Student_Settings";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 function StudentsSettingsPage() {
   const [clicked, setClicked] = useState(false);
@@ -13,4 +14,4 @@ function StudentsSettingsPage() {
     </>
   );
 }
-export default StudentsSettingsPage;
+export default Authenticate(StudentsSettingsPage);

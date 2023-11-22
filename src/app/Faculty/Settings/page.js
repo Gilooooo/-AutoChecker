@@ -1,6 +1,7 @@
 "use client"
 import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
 import FacultySettings from "@/_Components/Settings/Faculty_Settings";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 function SettingsPage() {
   const [clicked, setClicked] = useState(false);
@@ -13,4 +14,4 @@ function SettingsPage() {
     </>
   );
 }
-export default SettingsPage;
+export default Authenticate(SettingsPage);

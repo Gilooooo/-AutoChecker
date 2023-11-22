@@ -2,6 +2,7 @@
 
 import AdminAside from "@/_Components/Default fix/Admin_aside";
 import AdminReport from "@/_Components/Report Problem/AdminReportProblem";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
 function AdminReportProblem() {
@@ -15,4 +16,4 @@ function AdminReportProblem() {
     </>
   );
 }
-export default AdminReportProblem;
+export default Authenticate(AdminReportProblem);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Webcam from 'react-webcam';
 import axios from 'axios';
+import Authenticate from '@/app/Authentication';
 
 const ImageInput = ({ onImageSelected }) => {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -153,7 +154,7 @@ const ImageInput = ({ onImageSelected }) => {
   );
 };
 
-export default ImageInput;
+export default Authenticate(ImageInput);
 
 // Utility function to convert data URI to Blob
 function dataURItoBlob(dataURI) {

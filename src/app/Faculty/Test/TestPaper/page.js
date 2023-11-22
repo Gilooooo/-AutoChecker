@@ -2,9 +2,10 @@
 
 import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
 import TestPaper from "@/_Components/TestPaper/TestPaper";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
-export default function DashboardPage() {
+function DashboardPage() {
   const [clicked, setClicked] = useState(false);
   return (
     <div className="d-flex">
@@ -13,3 +14,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+export default Authenticate(DashboardPage);

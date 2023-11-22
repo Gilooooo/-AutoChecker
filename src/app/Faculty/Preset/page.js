@@ -1,6 +1,7 @@
 "use client";
 import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
 import Preset from "@/_Components/Faculty/PresetListofTest";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 function PresetPage() {
   const [clicked, setClicked] = useState(false);
@@ -13,4 +14,4 @@ function PresetPage() {
     </>
   );
 }
-export default PresetPage;
+export default Authenticate(PresetPage);

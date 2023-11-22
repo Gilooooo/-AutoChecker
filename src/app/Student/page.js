@@ -2,6 +2,7 @@
 import Aside_Student from "@/_Components/Default fix/Aside_Student";
 import StudentTestList from "@/_Components/Student/StudentTestList";
 import { useState } from "react";
+import Authenticate from "../Authentication";
 function StudentPage() {
   const [clicked, setClicked] = useState(false);
   return (
@@ -13,4 +14,4 @@ function StudentPage() {
     </>
   );
 }
-export default StudentPage;
+export default Authenticate(StudentPage);

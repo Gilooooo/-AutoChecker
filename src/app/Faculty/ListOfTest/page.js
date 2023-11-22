@@ -1,6 +1,7 @@
 "use client";
 import Aside_Faculty from "@/_Components/Default fix/Aside_Faculty";
 import ListOfTest from "@/_Components/Faculty/ListofTest";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
 function ListOfTestPage() {
@@ -14,4 +15,4 @@ function ListOfTestPage() {
     </>
   );
 }
-export default ListOfTestPage;
+export default Authenticate(ListOfTestPage);

@@ -1,6 +1,7 @@
 "use client";
 import FacultyTestList from "@/_Components/Admin Page/Admin_FacultyTestlist";
 import AdminAside from "@/_Components/Default fix/Admin_aside";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
 function TestList_Page() {
@@ -14,4 +15,4 @@ function TestList_Page() {
     </>
   );
 }
-export default TestList_Page;
+export default Authenticate(TestList_Page);

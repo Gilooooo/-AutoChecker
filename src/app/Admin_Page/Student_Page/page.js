@@ -1,6 +1,7 @@
 "use client"
 import Admin_Student from "@/_Components/Admin Page/Admin_Student";
 import AdminAside from "@/_Components/Default fix/Admin_aside";
+import Authenticate from "@/app/Authentication";
 import { useState } from "react";
 
 function Student_Page(){
@@ -14,4 +15,4 @@ function Student_Page(){
         </>
     )
 };
-export default Student_Page;
+export default Authenticate(Student_Page);
