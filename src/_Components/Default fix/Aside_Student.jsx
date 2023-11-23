@@ -28,7 +28,6 @@ function Aside_Student({ clicked, setClicked }) {
     };
   }, [clicked]);
 
-
   const fetchAside = async () => {
     try {
       const response = await axios.get(
@@ -54,18 +53,19 @@ function Aside_Student({ clicked, setClicked }) {
     };
   }, [TUPCID]);
 
- 
-
   const submitForm = async () => {
     try {
       const data = {
         TUPCID,
         PROFILE: "student",
-        STATUS: "OFFLINE"
+        STATUS: "OFFLINE",
       };
-  
-      const logoutResponse = await axios.post("http://localhost:3001/studentlogout", data);
-  
+
+      const logoutResponse = await axios.post(
+        "http://localhost:3001/studentlogout",
+        data
+      );
+
       if (logoutResponse.status === 200) {
         console.log("Logout successful");
       } else {
@@ -82,9 +82,6 @@ function Aside_Student({ clicked, setClicked }) {
       }
     }
   };
-  
-  
-
 
   return (
     <>
@@ -97,18 +94,34 @@ function Aside_Student({ clicked, setClicked }) {
             ></i>
           </div>
           <div className="d-flex flex-column">
-            {path == "/Student/Settings" ? (
-              <i className="bi bi-gear-fill fs-3"></i>
-            ) : (
-              <i className="bi bi-gear fs-3 custom-hover"></i>
-            )}
-            {path == "/Student/ReportProblem" ? (
-              <i className="bi bi-exclamation-triangle-fill fs-3"></i>
-            ) : (
-              <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
-            )}
-
-            <i className="bi bi-power fs-3 custom-hover"></i>
+            <Link
+              href={{ pathname: "/Student/Settings" }}
+              className="text-decoration-none link-dark"
+            >
+              {path == "/Student/Settings" ? (
+                <i className="bi bi-gear-fill fs-3"></i>
+              ) : (
+                <i className="bi bi-gear fs-3 custom-hover"></i>
+              )}
+            </Link>
+            <Link
+              href={{ pathname: "/Student/ReportProblem" }}
+              className="text-decoration-none link-dark"
+            >
+              {path == "/Student/ReportProblem" ? (
+                <i className="bi bi-exclamation-triangle-fill fs-3"></i>
+              ) : (
+                <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
+              )}
+            </Link>
+            <Link
+              href={{ pathname: "/Login" }}
+              className="text-decoration-none link-dark"
+              onClick={() => setTUPCID("")}
+            >
+              {" "}
+              <i className="bi bi-power fs-3 custom-hover"></i>
+            </Link>
           </div>
         </div>
       </aside>
@@ -177,7 +190,9 @@ function Aside_Student({ clicked, setClicked }) {
             >
               <div className="d-flex align-items-center gap-1 custom-hover">
                 <i className="bi bi-power fs-3"></i>
-                <span className="fs-5" onClick={submitForm}>LOGOUT</span>
+                <span className="fs-5" onClick={submitForm}>
+                  LOGOUT
+                </span>
               </div>
             </Link>
           </div>

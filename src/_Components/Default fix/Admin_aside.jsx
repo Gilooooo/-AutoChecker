@@ -61,22 +61,50 @@ function AdminAside({ clicked, setClicked }) {
             ></i>
           </div>
           <div className="d-flex flex-column h-50 justify-content-center gap-2 border-top border-bottom border-danger ">
-            {path == "/Admin_Page/Admin" ? (
-              <i className="bi bi-house-fill fs-3 custom-hover"></i>
-            ) : (
-              <i className="bi bi-house fs-3 custom-hover"></i>
-            )}
-            {path == "/Admin_Page/Student_Page" ? (
-              <i className="bi bi-person-fill fs-3 custom-hover"></i>
-            ) : (
-              <i className="bi bi-person fs-3 custom-hover"></i>
-            )}
-
-            <i className="bi bi-journals fs-3 custom-hover"></i>
+            <Link
+              href={{ pathname: "/Admin_Page/Admin" }}
+              className="link-dark text-decoration-none"
+            >
+              {path == "/Admin_Page/Admin" ? (
+                <i className="bi bi-house-fill fs-3"></i>
+              ) : (
+                <i className="bi bi-house fs-3 custom-hover"></i>
+              )}
+            </Link>
+            <Link
+              href={{
+                pathname: "/Admin_Page/Student_Page",
+              }}
+              className="link-dark text-decoration-none"
+            >
+              {path == "/Admin_Page/Student_Page" ? (
+                <i className="bi bi-person-fill fs-3"></i>
+              ) : (
+                <i className="bi bi-person fs-3 custom-hover"></i>
+              )}
+            </Link>
+            <Link
+              href={{ pathname: "/Admin_Page/Faculty_Page" }}
+              className="link-dark text-decoration-none"
+            >
+              <i className="bi bi-journals fs-3 custom-hover"></i>
+            </Link>
           </div>
           <div className="d-flex flex-column gap-2">
-            <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
-            <i className="bi bi-power fs-3 custom-hover"></i>
+            <Link
+              href={{ pathname: "/Admin_Page/ReportProblem" }}
+              className="link-dark text-decoration-none"
+            >
+              <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
+            </Link>
+
+            <Link
+              href={{ pathname: "/Login" }}
+              className="text-decoration-none link-dark"
+              onClick={() => setTUPCID("")}
+            >
+              <i className="bi bi-power fs-3 custom-hover"></i>
+            </Link>
           </div>
         </div>
       </aside>
@@ -115,7 +143,7 @@ function AdminAside({ clicked, setClicked }) {
             <Link
               className="text-decoration-none link-dark "
               href={{
-                pathname: "/Admin_Page/Student_Page"
+                pathname: "/Admin_Page/Student_Page",
               }}
             >
               {path == "/Admin_Page/Student_Page" ? (
@@ -133,7 +161,7 @@ function AdminAside({ clicked, setClicked }) {
             <Link
               className="text-decoration-none link-dark"
               href={{
-                pathname: "/Admin_Page/Faculty_Page"
+                pathname: "/Admin_Page/Faculty_Page",
               }}
             >
               {path == "/Admin_Page/Faculty_Page" ? (

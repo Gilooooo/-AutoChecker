@@ -25,6 +25,7 @@ function StudentSettings({ clicked, setClicked }) {
         const response = await axios.get(
           `http://localhost:3001/studinfos?TUPCID=${TUPCID}`
         );
+        console.log(response.data);
         const {
           FIRSTNAME,
           SURNAME,
@@ -78,8 +79,8 @@ function StudentSettings({ clicked, setClicked }) {
         STATUS: status,
         GSFEACC: gsfeacc,
       };
-
       await updateStudentDataOnServer(TUPCID, updatedData);
+      // window.location.reload();
       // Update initial faculty information
       setInitialInfo(updatedData);
       // Update shared state or context with the new information
@@ -94,9 +95,17 @@ function StudentSettings({ clicked, setClicked }) {
   const updateStudentDataOnServer = async (TUPCID, updatedData) => {
     try {
       await axios.put(
-        `http://localhost:3001/updatestudentinfos/${TUPCID}`,
+        `http://localhost:3001/updatestudentinfos?TUPCID=${TUPCID}`,
         updatedData
       );
+      setFirstName(updatedData.FIRSTNAME);
+      setMiddleName(updatedData.MIDDLENAME);
+      setSurName(updatedData.SURNAME);
+      setGsfeacc(updatedData.GSFEACC);
+      setCourse(updatedData.COURSE);
+      setSection(updatedData.SECTION);
+      setYear(updatedData.yeaYEAR);
+      setStatus(updatedData.STATUS);
     } catch (error) {
       console.error("Error updating student data:", error);
     }
@@ -269,8 +278,12 @@ function StudentSettings({ clicked, setClicked }) {
             {isEditing && (
               <div className="pt-3 text-center col-12">
                 <button
-                  type="submit"
+                  type="button"
                   className="btn btn-light col-md-5 col-lg-2 border border-dark rounded text-center"
+                  onClick={() => {
+                    handleSave();
+                    setIsEditing(false);
+                  }}
                 >
                   SAVE
                 </button>

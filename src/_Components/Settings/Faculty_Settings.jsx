@@ -143,7 +143,7 @@ export default function FacultySettings({clicked, setClicked}) {
             </span>
           </div>
 
-          <form
+          <fo rm
             className="p-3 pt-0 col-sm-10 text-sm-start text-center align-self-center"
             onSubmit={handleSave}
           >
@@ -237,7 +237,7 @@ export default function FacultySettings({clicked, setClicked}) {
                 </button>
               </div>
             )}
-          </form>
+          </fo>
         </div>
         {/* Modal */}
         {warning && (
