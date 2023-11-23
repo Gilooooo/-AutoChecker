@@ -18,15 +18,15 @@ function AdminDashboard({ clicked, setClicked }) {
         const facultiesResponse = await axios.get(
           "http://localhost:3001/getfacultyrecords"
         );
-        setFaculties(facultiesResponse.data);
+        setFaculties(facultiesResponse.data.reverse()); // Reverse faculty records
 
         const studentsResponse = await axios.get(
           "http://localhost:3001/getstudentrecords"
         );
-        setStudents(studentsResponse.data);
+        setStudents(studentsResponse.data.reverse()); // Reverse student records
 
         const loginResponse = await axios.get("http://localhost:3001/getlogin");
-        setlogin(loginResponse.data);
+        setlogin(loginResponse.data.reverse()); // Reverse login records
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -71,7 +71,8 @@ function AdminDashboard({ clicked, setClicked }) {
   };
 
   return (
-    <main className="p-0 vh-100 w-100 position-relative">
+    <main className="p-0 
+    Min-vh-100  w-100 position-relative">
       <section className="contatiner col-12 text-start  d-flex flex-column align-items-center justify-content-center">
         <div className="d-flex w-100 align-items-center">
           <div className="border-bottom border-dark py-1 ps-sm-0 ps-3">
@@ -92,7 +93,7 @@ function AdminDashboard({ clicked, setClicked }) {
             <div className="col-6 d-flex flex-column gap-3 align-self-center ps-1 mb-2"></div>
 
             <div className="col-6 rounded ps-3 p-0 table-responsive custom-table-h">
-              <span className="d-flex justify-content-between align-items-center bg-secondary rounded py-1 px-3">
+              <span className="d-flex justify-content-between align-items-center bg-secondary rounded py-1 px-3 ">
                 RECENTLY REGISTERED
                 <Link href="/Admin_Page/Student_Page">
                   <button className="btn btn-outline-light btn-sm border-secondary custom-black-color">
@@ -111,7 +112,7 @@ function AdminDashboard({ clicked, setClicked }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {studentsOnline.map((student, index) => (
+                {studentsOnline.slice(0, 3).map((student, index) => (
                     <tr key={index}>
                       <td>{student.TUPCID}</td>
                       <td>{student.GSFEACC}</td>
@@ -137,7 +138,7 @@ function AdminDashboard({ clicked, setClicked }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {login.map((log, index) => (
+                  {login.slice(0, 10).map((log, index) => (
                     <tr key={index}>
                       <td>{log.TUPCID}</td>
                       <td>{log.loginTime}</td>
@@ -168,7 +169,7 @@ function AdminDashboard({ clicked, setClicked }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {facultiesOnline.map((faculty, index) => (
+                  {facultiesOnline.slice(0, 3).map((faculty, index) => (
                     <tr key={index}>
                       <td>{faculty.TUPCID}</td>
                       <td>{faculty.GSFEACC}</td>
@@ -180,7 +181,7 @@ function AdminDashboard({ clicked, setClicked }) {
               </table>
             </div>
           </div>
-          <section className="position-absolute bottom-0 end-0 mb-3 me-3 text-end">
+          <section className="position-fixed bottom-0 end-0 mb-3 me-3 text-end">
             <button
               className="btn btn-dark btn-lg"
               onClick={generateloginaudit}

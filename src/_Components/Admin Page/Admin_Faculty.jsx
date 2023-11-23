@@ -9,7 +9,7 @@ function Admin_Faculty({ clicked, setClicked }) {
   const fetchFaculty = async () => {
     try {
       const response = await axios.get("http://localhost:3001/Admin_Faculty");
-      setFaculty(response.data);
+      setFaculty(response.data.reverse());
     } catch (err) {
       console.error(err);
     }
@@ -110,7 +110,7 @@ const generateAuditLog = async () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {newFacultyList.map((faculties, index) => (
+                  {newFacultyList.slice(0, 6).map((faculties, index) => (
                     <tr key={index}>
                       <td scope="col">{faculties.TUPCID}</td>
                       <td scope="col">{faculties.FIRSTNAME}</td>

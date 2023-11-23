@@ -9,7 +9,7 @@ function Admin_Student({ clicked, setClicked }) {
   const fetchStudent = async () => {
     try {
       const response = await axios.get("http://localhost:3001/Admin_Students");
-      setStudent(response.data);
+      setStudent(response.data.reverse());
     } catch (err) {
       console.error(err);
     }
@@ -101,7 +101,7 @@ function Admin_Student({ clicked, setClicked }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {newStudentList.map((students, index) => (
+                  {newStudentList.slice(0, 6).map((students, index) => (
                     <tr key={index}>
                       <td scope="col">{students.TUPCID}</td>
                       <td scope="col">{students.FIRSTNAME}</td>

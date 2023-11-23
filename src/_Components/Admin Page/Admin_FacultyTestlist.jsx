@@ -12,7 +12,7 @@ function FacultyTestList({ clicked, setClicked }) {
         "http://localhost:3001/Admin_FacultyTestList"
       );
 
-      setTestlist(response.data);
+      setTestlist(response.data.reverse());
     } catch (err) {
       console.error(err);
     }
@@ -119,7 +119,7 @@ const generatetestlist = async () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {newTestList.map((tests, index) => (
+                  {newTestList.slice(0, 6).map((tests, index) => (
                     <tr key={index}>
                       <td scope="col">{index+1}</td>
                       <td scope="col"> {tests.Professor_FirstName}</td>
