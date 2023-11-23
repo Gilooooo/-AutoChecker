@@ -37,7 +37,7 @@ input[type="number"]::-webkit-outer-spin-button {
   cursor: pointer;
 }
 .custom-table-h {
-  max-height: 60vh;
+  max-height: 30vh;
 }
 .custom-h-footer {
   height: 5vh;

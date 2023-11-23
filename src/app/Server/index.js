@@ -1057,7 +1057,7 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
     const filename = ` ${test_name}.pdf`;
 
     // Set the title based on TEST NUMBER and TEST NAME
-    const title = doc.text(`${semester}: ${subject}  ${test_name}                                           UID:${uid}`, {
+    const title = doc.text(`${semester}: ${subject}  ${test_name}                   UID:${uid}`, {
       bold: true,
       fontSize: 24,
       align: "left",

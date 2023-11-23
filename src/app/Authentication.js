@@ -1,18 +1,32 @@
+"use client";
+
 import { useTUPCID } from "@/app/Provider";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const Authenticate = (Component) => {
   return (props) => {
     const { TUPCID } = useTUPCID();
     const router = useRouter();
-    useEffect(() => {
-      if (!TUPCID) {
-        router.push("/Login");
-      }
-    }, [TUPCID, router]);
+    const [delay, setDelay] = useState(true);
 
-    return <Component {...props} />;
+    useEffect(() => {
+      if (TUPCID === '') {
+        setDelay(false);
+      } else {
+        setDelay(false);
+      }
+    }, [TUPCID]);
+
+    useEffect(() => {
+      if (!delay) {
+        if (!TUPCID) {
+          router.push("/Login");
+        }
+      }
+    }, [TUPCID, delay, router]);
+
+    return !delay && <Component {...props} />;
   };
 };
 

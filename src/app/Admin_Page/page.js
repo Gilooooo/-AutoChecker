@@ -8,7 +8,6 @@ function Admin_Page() {
       <Header/>
         <AdminLogin/>
       <Footer/>
-
     </>
   );
 }
