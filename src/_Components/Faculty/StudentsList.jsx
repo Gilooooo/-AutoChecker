@@ -3,6 +3,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTUPCID } from "@/app/Provider";
+import ClipboardJS from "clipboard";
 
 function StudentsList({ clicked, setClicked }) {
   const { TUPCID } = useTUPCID();
@@ -102,7 +103,7 @@ function StudentsList({ clicked, setClicked }) {
 
   const copy = (e) => {
     setCopyClick(!copyClick);
-    navigator.clipboard.writeText(e);
+    ClipboardJS.copy(e)
   };
 
   const checkAll = () => {

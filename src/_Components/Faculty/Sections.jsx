@@ -2,6 +2,7 @@ import { useTUPCID } from "@/app/Provider";
 import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import ClipboardJS from "clipboard";
 
 function Sections({ setClicked, clicked }) {
   const { TUPCID } = useTUPCID();
@@ -68,7 +69,7 @@ function Sections({ setClicked, clicked }) {
     const updatedSections = sectionList.map((section) => {
       if (section.Uid_Section === uid) {
         section.copyClick = !section.copyClick;
-        navigator.clipboard.writeText(section.Uid_Section);
+        ClipboardJS.copy(section.Uid_Section)
       }
       return section;
     });
