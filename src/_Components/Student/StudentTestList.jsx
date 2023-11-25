@@ -1,341 +1,265 @@
 import { useTUPCID } from "@/app/Provider";
 import axios from "axios";
 import Link from "next/link";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-function StudentSettings({ clicked, setClicked }) {
+function StudentTestList({ clicked, setClicked }) {
   const { TUPCID } = useTUPCID();
-  const [Tupcid, setTupcid] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [surName, setSurName] = useState("");
-  const [MiddleName, setMiddleName] = useState("");
-  const [course, setCourse] = useState("");
-  const [section, setSection] = useState("");
-  const [year, setYear] = useState("");
-  const [status, setStatus] = useState("");
-  const [gsfeacc, setGsfeacc] = useState("");
-  const [initialStudentInfo, setInitialInfo] = useState({});
-  const [isEditing, setIsEditing] = useState(false);
-  const [warning, setWarning] = useState(false);
+  const [testList, setTestList] = useState([]);
+  const [uidSection, setUidSection] = useState("");
+  const [message, setMessage] = useState("");
+  const [publishedtest, setPublishedTest] = useState([]);
+  const [testNameMap, setTestNameMap] = useState({});
+  const [studentScores, setStudentScores] = useState([]);
+  const [dropdown, setDropdown] = useState(false);
+  const [sorted, setSorted] = useState(false);
+
+  const Join = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3001/StudentTestList?uidsection=${uidSection}`
+      );
+      if (response.status === 200) {
+        setMessage("");
+        try {
+          const response1 = await axios.put(
+            `http://localhost:3001/StudentTestList?uidStudent=${TUPCID}`,
+            response.data[0]
+          );
+          if (response1.status === 200) {
+            console.log("Done");
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        setMessage("Section doesn't exist or wrong uid");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchingStudentTest = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3001/StudentSectionList?uidStudent=${TUPCID}`
+      );
+
+      const enrolledSections = response.data.enrolledSections || [];
+      setTestList(enrolledSections);
+      console.log("data i received:  ", enrolledSections);
+
+      // Create testNameMap based on Uid_Test and TestName from the backend
+      const testNameRows = response.data.testNameMap || [];
+      const map = {};
+      testNameRows.forEach((row) => {
+        map[row.Uid_Test] = row.TestName;
+      });
+
+      console.log("testname row: ", testNameRows);
+      console.log("testnamemap: ", map);
+
+      setTestNameMap(testNameRows);
+
+      const { studentScores } = response.data;
+      console.log("Student Scores for test", studentScores);
+      setStudentScores(studentScores || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const subject = () => {
+    const sortedList = [...testList].sort((a, b) =>
+      a.Section_Subject.localeCompare(b.Section_Subject)
+    );
+    setSorted(true);
+    setTestList(sortedList);
+  };
+
+  const course = () => {
+    const sortedList = [...testList].sort((a, b) =>
+      a.Section_Name.localeCompare(b.Section_Name)
+    );
+    setSorted(true);
+    setTestList(sortedList);
+  };
 
   useEffect(() => {
-    const fetchstudentdate = async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:3001/studinfos?TUPCID=${TUPCID}`
-        );
-        console.log(response.data);
-        const {
-          FIRSTNAME,
-          SURNAME,
-          MIDDLENAME,
-          COURSE,
-          SECTION,
-          YEAR,
-          STATUS,
-          GSFEACC,
-        } = response.data;
-
-        // Store initial faculty information
-        const initialStudentInfo = {
-          FIRSTNAME,
-          MIDDLENAME,
-          SURNAME,
-          COURSE,
-          SECTION,
-          YEAR,
-          STATUS,
-          GSFEACC,
-        };
-
-        // Set state with fetched data
-        setTupcid(response.data.Tupcid);
-        setFirstName(FIRSTNAME);
-        setMiddleName(MIDDLENAME);
-        setSurName(SURNAME);
-        setCourse(COURSE);
-        setSection(SECTION);
-        setYear(YEAR);
-        setStatus(STATUS);
-        setGsfeacc(GSFEACC);
-        setInitialInfo(initialStudentInfo);
-      } catch (error) {
-        console.error(error);
+    const fetching = setInterval(() => {
+      if (sorted) {
+        return;
       }
+      fetchingStudentTest();
+    }, 2000);
+    return () => {
+      clearInterval(fetching);
     };
-    fetchstudentdate();
-  }, [TUPCID]);
+  }, [TUPCID, sorted]);
 
-  const handleSave = async () => {
-    try {
-      const updatedData = {
-        FIRSTNAME: firstName,
-        SURNAME: surName,
-        MIDDLENAME: MiddleName,
-        COURSE: course,
-        SECTION: section,
-        YEAR: year,
-        STATUS: status,
-        GSFEACC: gsfeacc,
-      };
-      await updateStudentDataOnServer(TUPCID, updatedData);
-      // window.location.reload();
-      // Update initial faculty information
-      setInitialInfo(updatedData);
-      // Update shared state or context with the new information
-      updateStudentInfoContext(updatedData);
-      // Exit editing mode
-      setIsEditing(false);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const updateStudentDataOnServer = async (TUPCID, updatedData) => {
-    try {
-      await axios.put(
-        `http://localhost:3001/updatestudentinfos?TUPCID=${TUPCID}`,
-        updatedData
-      );
-      setFirstName(updatedData.FIRSTNAME);
-      setMiddleName(updatedData.MIDDLENAME);
-      setSurName(updatedData.SURNAME);
-      setGsfeacc(updatedData.GSFEACC);
-      setCourse(updatedData.COURSE);
-      setSection(updatedData.SECTION);
-      setYear(updatedData.yeaYEAR);
-      setStatus(updatedData.STATUS);
-    } catch (error) {
-      console.error("Error updating student data:", error);
-    }
-  };
   const handleclick = () => {
     setClicked(!clicked);
   };
+
   return (
-    <main className="w-100 min-vh-100">
-      <section className="container-fluid col-12 p-2 d-flex flex-column ">
-        <div className="d-flex align-items-center">
+    <main className="w-100 min-vh-100 d-flex justify-content-center">
+      <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-start p-2">
+        <div className="d-flex gap-2 align-items-center mb-3 w-100">
           <i
             className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
             onClick={handleclick}
           ></i>
-          <Link href={{ pathname: "/Student" }}>
-            <i className="bi bi-arrow-left fs-3 custom-black-color d-sm-block d-none"></i>
-          </Link>
-          <h2 className="m-0 w-100 text-center text-sm-start pe-2">Settings</h2>
+          <h2 className="m-0 w-100 text-center text-sm-start pe-3">STUDENT</h2>
         </div>
-        <h3 className="text-center pt-3 m-0 ">UPDATE PERSONAL INFO</h3>
-        <div className="d-flex justify-content-center flex-column container col-md-9 col-xl-5 col-lg-7 rounded border border-dark py-2">
-          <span
-            className="text-end"
-            onClick={() => {
-              if (isEditing) {
-                setFirstName(initialStudentInfo.FIRSTNAME);
-                setMiddleName(initialStudentInfo.MIDDLENAME);
-                setSurName(initialStudentInfo.SURNAME);
-                setCourse(initialStudentInfo.COURSE);
-                setSection(initialStudentInfo.SECTION);
-                setYear(initialStudentInfo.YEAR);
-                setStatus(initialStudentInfo.STATUS);
-                setGsfeacc(initialStudentInfo.GSFEACC);
-              }
-              setIsEditing((prevEditing) => !prevEditing);
-            }}
-          >
-            {isEditing ? "Cancel" : "EDIT"}
-          </span>
-          <form
-            onSubmit={handleSave}
-            className="row p-3 pt-0 col-11 text-sm-start text-center align-self-center"
-          >
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">TUPC ID</p>
-              <input
-                type="text"
-                value={Tupcid}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                disabled
-              />
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">GSFE ACCOUNT</p>
-              <input
-                type="text"
-                value={gsfeacc}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                disabled={!isEditing}
-                onChange={(e) => setGsfeacc(e.target.value)}
-              />
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">FIRST NAME</p>
-              <input
-                type="text"
-                value={firstName}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                disabled={!isEditing}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">COURSE</p>
-              <select
-                type="text"
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                disabled={!isEditing}
-              >
-                <option value="BSCE">BSCE</option>
-                <option value="BSEE">BSEE</option>
-                <option value="BSME">BSME</option>
-                <option value="BSIE ICT">BSIE ICT</option>
-                <option value="BSIE IA">BSIE IA</option>
-                <option value="BSIE HE">BSIE HE</option>
-                <option value="BTTE CP">BTTE CP</option>
-                <option value="BTTE EL">BTTE EL</option>
-                <option value="BET AT">BET AT</option>
-                <option value="BET CT">BET CT</option>
-                <option value="BET COET">BET COET</option>
-                <option value="BET ET">BET ET</option>
-                <option value="BET ESET">BET ESET</option>
-                <option value="BET MT">BET MT</option>
-                <option value="BET PPT">BET PPT</option>
-              </select>
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">MIDDLE NAME</p>
-              <input
-                type="text"
-                value={MiddleName}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                disabled={!isEditing}
-                onChange={(e) => setMiddleName(e.target.value)}
-              />
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">YEAR</p>
-              <select
-                type="text"
-                value={year}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                onChange={(e) => setYear(e.target.value)}
-                disabled={!isEditing}
-              >
-                <option value={year}hidden>{year}</option>
-                <option value="1st">1st</option>
-                <option value="2nd">2nd</option>
-                <option value="3rd">3rd</option>
-                <option value="4th">4th</option>
-              </select>
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">SURNAME</p>
-              <input
-                type="text"
-                value={surName}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                disabled={!isEditing}
-                onChange={(e) => setSurName(e.target.value)}
-              />
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">SECTION</p>
-              <select
-                type="text"
-                value={section}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                onChange={(e) => setSection(e.target.value)}
-                disabled={!isEditing}
-              >
-                <option value={section} hidden>{section}</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-              </select>
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="p-0 m-0">STATUS</p>
-              <select
-                type="text"
-                value={status}
-                className="col-12 rounded py-1 px-3 border border-dark"
-                disabled={!isEditing}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value={status} hidden>{status}</option>
-                <option value="Regular">Regular</option>
-                <option value="Irregular">Irregular</option>
-              </select>
-            </div>
-            <div className="col-sm-6 p-2">
-              <p className="col-sm-6 p-0 m-0 align-self-center">PASSWORD:</p>
-              <a
-                className="col-sm-6 p-0 m-0 text-decoration-underline link-primary"
-                onClick={() => setWarning(!warning)}
-              >
-                Update Password
-              </a>
-            </div>
-            {isEditing && (
-              <div className="pt-3 text-center col-12">
-                <button
-                  type="button"
-                  className="btn btn-light col-md-5 col-lg-2 border border-dark rounded text-center"
-                  onClick={() => {
-                    handleSave();
-                    setIsEditing(false);
-                  }}
-                >
-                  SAVE
-                </button>
-              </div>
-            )}
-          </form>
+        <div className="d-flex justify-content-end w-100 ">
+          <small onClick={() => console.log(publishedtest)}>Sort by:</small>
         </div>
-        {/* Modal */}
-        {warning && (
-          <div className="d-block modal bg-secondary" tabIndex="-1">
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Warning</h5>
-                </div>
-                <div className="modal-body">
-                  <p className="text-center">
-                    It will lead you to the forget password and you need to
-                    re-login again, are you sure to do that?
-                  </p>
-                </div>
-                <div className="modal-footer align-self-center">
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    data-bs-dismiss="modal"
-                    onClick={() => setWarning(!warning)}
-                  >
-                    Cancel
-                  </button>
-                  <Link href="/Login/Password/ForgetPassword">
+        <div className="d-flex justify-content-between w-100 position-relative">
+          <div className="d-flex gap-2">
+            <button
+              className="btn btn-outline-dark"
+              data-bs-toggle="modal"
+              data-bs-target="#Jointest"
+            >
+              + JOIN
+            </button>
+            {/* Start Modal Add Test */}
+            <div
+              className="modal fade"
+              id="Jointest"
+              tabIndex="-1"
+              aria-labelledby="JointestLabel"
+              aria-hidden="true"
+              data-bs-backdrop="static"
+            >
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header position-relative justify-content-center">
+                    <h1 className="modal-title fs-5" id="JointestLabel">
+                      JOIN SECTION
+                    </h1>
+                    <button
+                      type="button"
+                      className="btn-close m-0 position-absolute end-0 pe-4"
+                      data-bs-dismiss="modal"
+                      aria-label="Close"
+                    ></button>
+                  </div>
+                  <div className="modal-body px-5 text-center row justify-content-center">
+                    <span className="text-secondary mb-2">
+                      ENTER THE CODE GIVEN BY A TEACHER OR A PROFESSOR
+                    </span>
+                    <label htmlFor="joinCode">JOIN CODE</label>
+                    <input
+                      value={uidSection}
+                      onChange={(e) => setUidSection(e.target.value)}
+                      name="joinCode"
+                      type="text"
+                      className="text-center border border-dark rounded py-1 px-3 col-3"
+                      maxLength="6"
+                    />
+                  </div>
+
+                  <div className="modal-footer justify-content-center w-100">
+                    <small className="text-danger col-12 text-center">
+                      {message}
+                    </small>
                     <button
                       type="button"
                       className="btn btn-primary"
-                      data-bs-dismiss="modal"
+                      data-bs-dismiss={
+                        message === "Section doesn't exist or wrong uid"
+                          ? " "
+                          : "modal"
+                      }
+                      onClick={Join}
                     >
-                      Ok
+                      JOIN
                     </button>
-                  </Link>
+                  </div>
                 </div>
               </div>
             </div>
+            {/* End of Modal for Add test */}
           </div>
-        )}
-        {/* end modal */}
+          <div className="dropdown align-self-center">
+            <i
+              className="bi bi-arrow-down-up d-md-none d-flex fs-4"
+              type="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            ></i>
+            <ul className="dropdown-menu">
+              <li>
+                <a className="dropdown-item" onClick={subject}>
+                  SUBJECT
+                </a>
+              </li>
+              <li>
+                <a className="dropdown-item" onClick={course}>
+                  SECTION / COURSE
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div className="d-md-flex d-none gap-md-2 gap-1 position-absolute end-0 align-self-end">
+            <button className="btn btn-outline-dark btn-sm" onClick={subject}>
+              SUBJECT
+            </button>
+            <button className="btn btn-outline-dark btn-sm" onClick={course}>
+              SECTION / COURSE
+            </button>
+          </div>
+        </div>
+        <div className="row m-0 mt-2 col-12 gap-2">
+          {testList.map((sections, index) => (
+            <div key={index} className="p-0">
+              <h5
+                className="m-0 border border-dark py-2 text-center rounded mb-1 dropdown-toggle"
+                onClick={() => setDropdown(dropdown === index ? null : index)}
+              >
+                {sections.Section_Uid} {sections.Section_Subject}
+              </h5>
+              <div
+                className={`${
+                  dropdown === index ? "d-flex" : "d-none"
+                } flex-column gap-2 py-2 px-3`}
+              >
+                {/* Published test */}
+                {testNameMap
+                  .filter((tests) => tests.Section_Uid === sections.Section_Uid)
+                  .map((Tests, idx) => (
+                    <div
+                      className="p-1 px-3 border border-dark rounded col-12"
+                      key={idx}
+                    >
+                      <Link
+                        href={{
+                          pathname: "/Student/Result",
+                          query: {
+                            studentid: TUPCID,
+                            uidoftest: Tests.Uid_Test,
+                          },
+                        }}
+                        className="link-dark text-decoration-none"
+                      >
+                        <h5 className="m-0 py-2">
+                          Test Uid: {Tests.Uid_Test} | Test Name:{" "}
+                          {Tests.TestName} |{" "}
+                          {studentScores && studentScores.length > idx
+                            ? `GRADED | ${studentScores[idx].TOTALSCORE} / ${studentScores[idx].MAXSCORE}`
+                            : "PENDING | Score not available"}
+                        </h5>
+                      </Link>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
     </main>
   );
 }
-export default StudentSettings;
+export default StudentTestList;
