@@ -224,6 +224,7 @@ function StudentSettings({ clicked, setClicked }) {
                 onChange={(e) => setYear(e.target.value)}
                 disabled={!isEditing}
               >
+                <option value={year}hidden>{year}</option>
                 <option value="1st">1st</option>
                 <option value="2nd">2nd</option>
                 <option value="3rd">3rd</option>
@@ -249,8 +250,11 @@ function StudentSettings({ clicked, setClicked }) {
                 onChange={(e) => setSection(e.target.value)}
                 disabled={!isEditing}
               >
+                <option value={section} hidden>{section}</option>
                 <option value="A">A</option>
                 <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
               </select>
             </div>
             <div className="col-sm-6 p-2">
@@ -262,6 +266,7 @@ function StudentSettings({ clicked, setClicked }) {
                 disabled={!isEditing}
                 onChange={(e) => setStatus(e.target.value)}
               >
+                <option value={status} hidden>{status}</option>
                 <option value="Regular">Regular</option>
                 <option value="Irregular">Irregular</option>
               </select>
