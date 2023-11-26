@@ -1057,7 +1057,7 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
     const filename = ` ${test_name}.pdf`;
 
     // Set the title based on TEST NUMBER and TEST NAME
-    const title = doc.text(`${semester}: ${subject}  ${test_name}                                           UID:${uid}`, {
+    const title = doc.text(`${semester}: ${subject}  ${test_name}               UID:${uid}`, {
       bold: true,
       fontSize: 24,
       align: "left",
@@ -1065,17 +1065,18 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
     doc.moveDown();
     const boxX = 65; 
     const boxY = 80; 
-    const boxWidth = 500; 
-    const boxHeight = 100; 
+    const boxWidth = 520; 
+    const boxHeight = 120; 
     
     // Draw a rectangle
     doc.rect(boxX, boxY, boxWidth, boxHeight).stroke();
     
     // Text to be placed inside the box
     const directionsText = `    GENERAL DIRECTIONS:
-    1. STRICTLY NO ERASURE
-    2. PUT YOUR ANSWER INSIDE THE CORRESPONDING BOXES
-    3. ANSWER IN ORDER`;
+    1. STRICTLY NO ERASURE AND READ DIRECTIONS 
+    2. ANSWER IN ORDER AND COMPLETELY 
+    3. PUT YOUR ANSWER IN THE CORRESPONDING BOXES
+    4. PUT EXTRA SPACE PER LETTER`;
     
 
     doc.text(directionsText, boxX + 50, boxY + 10, {
@@ -1236,9 +1237,10 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
     });
 
     addStyledParagraph('GENERAL DIRECTIONS:', { bold: true });
-addStyledParagraph('1. STRICTLY NO ERASURE', { bold: true });
-addStyledParagraph('2. PUT YOUR ANSWER INSIDE THE CORRESPONDING BOXES', { bold: true });
-addStyledParagraph('3. ANSWER IN ORDER', { bold: true });
+addStyledParagraph('1. STRICTLY NO ERASURE AND READ DIRECTIONS', { bold: true });
+addStyledParagraph('2. ANSWER IN ORDER AND COMPLETELY', { bold: true });
+addStyledParagraph('3. PUT YOUR ANSWER IN THE CORRESPONDING BOXES ', { bold: true });
+addStyledParagraph('4. PUT EXTRA SPACE PER LETTER', { bold: true });
 
 
     docx.createP().addText('')
@@ -3257,9 +3259,6 @@ app.get('/getlogin', async (req, res) => {
     res.status(500).json({ message: 'An error occurred while fetching login records' });
   }
 });
-
-
-
 
 // Start the server
 app.listen(3001, () => {
