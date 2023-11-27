@@ -19,25 +19,26 @@ export default function Records() {
   const [updatedRecords, setUpdatedRecords] = useState([]);
   const [warning, setWarning] = useState(false);
 
-  useEffect(() => {
-    const fetchResult = async () => {
-      try {
-        const response = await axios.get(`http://localhost:3001/Studentscores/${uid}`);
+  const fetchResult = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3001/Studentscores/${uid}`
+      );
 
-        if (response.status === 200) {
-          const { studentlist } = response.data;
-          // Sort the records by correct answers when fetched successfully
-          const sortedRecords = [...studentlist];
-          sortedRecords.sort((a, b) => b.CORRECT - a.CORRECT);
-          setRecordList(sortedRecords);
-        } else {
-          console.error("Failed to fetch student scores");
-        }
-      } catch (error) {
-        console.error("Error fetching student scores:", error);
+      if (response.status === 200) {
+        const { studentlist } = response.data;
+        const sortedRecords = [...studentlist];
+        sortedRecords.sort((a, b) => b.CORRECT - a.CORRECT);
+        setRecordList(sortedRecords);
+      } else {
+        console.error("Failed to fetch student scores");
       }
-    };
+    } catch (error) {
+      console.error("Error fetching student scores:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchResult();
   }, [uid]);
 
@@ -86,24 +87,18 @@ export default function Records() {
 
   const handleUpdate = async (record) => {
     try {
-      const { TUPCID, CORRECT, WRONG, MAXSCORE } = record;
+      const { TUPCID, CORRECT, MAXSCORE } = record;
 
-      // Calculate the sum of CORRECT and WRONG
-      const sumAnswers = parseInt(CORRECT) + parseInt(WRONG);
-
-      if (sumAnswers !== parseInt(MAXSCORE)) {
-        setWarning(!warning)
-        return; // Stop execution if the condition fails
-      }
-
-      const newTotalScore = parseInt(CORRECT);
+      // Calculate the number of wrong answers based on total score and maximum score
+      const TOTALSCORE = parseInt(CORRECT);
+      const WRONG = parseInt(MAXSCORE) - TOTALSCORE;
 
       const response = await axios.put(
         `http://localhost:3001/updateTotalScore/${TUPCID}`,
         {
-          CORRECT: newTotalScore,
-          WRONG,
-          TOTALSCORE: newTotalScore,
+          CORRECT: TOTALSCORE,
+          WRONG, // Assign calculated WRONG value
+          TOTALSCORE,
         }
       );
 
@@ -118,7 +113,6 @@ export default function Records() {
     }
   };
 
-  
   return (
     <main className="min-vh-100 p-2 w-100">
       <section className="h-50">
@@ -219,20 +213,7 @@ export default function Records() {
                       )}
                     </td>
                     <td>
-                      {editMode ? (
-                        <input
-                          type="number"
-                          className="rounded border border-dark px-2 py-1 w-100"
-                          value={record.WRONG}
-                          onChange={(e) => {
-                            const updatedRecords = [...recordlist];
-                            updatedRecords[index].WRONG = e.target.value;
-                            setRecordList(updatedRecords);
-                          }}
-                        />
-                      ) : (
-                        record.WRONG
-                      )}
+                      {parseInt(record.MAXSCORE) - parseInt(record.CORRECT)}
                     </td>
                     <td>
                       {record.TOTALSCORE} / {record.MAXSCORE}
@@ -240,15 +221,24 @@ export default function Records() {
                     <td>
                       {editMode ? (
                         <div className="d-flex flex-column gap-2">
-                          <button onClick={() => handleUpdate(record)} className="btn btn-sm btn-outline-dark">
+                          <button
+                            onClick={() => handleUpdate(record)}
+                            className="btn btn-sm btn-outline-dark"
+                          >
                             Update
                           </button>
-                          <button onClick={() => handleEditMode()} className="btn btn-sm btn-outline-dark">
+                          <button
+                            onClick={() => handleEditMode()}
+                            className="btn btn-sm btn-outline-dark"
+                          >
                             Cancel
                           </button>
                         </div>
                       ) : (
-                        <button className="btn btn-outline-dark"onClick={() => handleEditMode()}>
+                        <button
+                          className="btn btn-outline-dark"
+                          onClick={() => handleEditMode()}
+                        >
                           Change Scores
                         </button>
                       )}
@@ -275,7 +265,8 @@ export default function Records() {
                 </div>
                 <div className="modal-body">
                   <p className="text-center">
-                    Sum of correct and wrong answers does not match MAXSCORE. Cannot update.
+                    Sum of correct and wrong answers does not match MAXSCORE.
+                    Cannot update.
                   </p>
                 </div>
                 <div className="modal-footer align-self-center">
@@ -291,8 +282,7 @@ export default function Records() {
               </div>
             </div>
           </div>
-        )
-        }
+        )}
         {/* Modal */}
       </section>
     </main>

@@ -251,10 +251,10 @@ function TesseractOCR({ Image, UIDintestpaper, setLoading, setProgress, updateSt
                <h5 className="modal-title">Extracting Text</h5>
              </div>
              <div className="modal-body">
-               <p className="text-center">
+               <div className="text-center">
                <p>Extracted Text: {recognizedText}</p>
           <p>PROCESS ALMOST COMPLETE...CONTINUE?</p>
-               </p>
+               </div>
              </div>
              <div className="modal-footer align-self-center">
                <button

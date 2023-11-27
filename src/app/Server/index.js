@@ -12,7 +12,9 @@ const romanize = require("romanize");
 const PDFDocument = require("pdfkit");
 const app = express();
 
-
+app.use(
+  cors()
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
@@ -22,12 +24,7 @@ app.use(
     saveUninitialized: false,
   })
 );
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-  })
-);
+
 app.use(cookieParser("mySecretKey"));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -904,8 +901,8 @@ app.put("/updatefacultyinfos/:TUPCID", async (req, res) => {
   }
 });
 
-app.get("/studinfos/:TUPCID", async (req, res) => {
-  const { TUPCID } = req.params;
+app.get("/studinfos", async (req, res) => {
+  const { TUPCID } = req.query;
   try {
     const query = "SELECT * from student_accounts WHERE uid = ?";
     const [getall] = await connection.query(query, [TUPCID]);
@@ -940,8 +937,8 @@ app.get("/studinfos/:TUPCID", async (req, res) => {
   }
 });
 
-app.put("/updatestudentinfos/:TUPCID", async (req, res) => {
-  const { TUPCID } = req.params;
+app.put("/updatestudentinfos", async (req, res) => {
+  const { TUPCID } = req.query;
   const updatedData = req.body;
   try {
     const datas = Object.keys(updatedData)
@@ -1453,7 +1450,7 @@ WHERE TRIM(UID_test) = ?;
 
     const boxStrokeColor = "#818582";
     
-    if (studentData.length < 1) {
+    if (studentData.length == 0) {
       const TUPCIDSTUDENT = "TUPC-XX-XXXX";
       const FIRSTNAME = "FIRSTNAME";
       const SURNAME = "SURNAME"
@@ -1464,7 +1461,7 @@ WHERE TRIM(UID_test) = ?;
 
       // First rectangle information
       doc.rect(70, 30, columnWidth + 299, 110).stroke();
-      doc.text(`${TUPCIDSTUDENT}`, 90, 30, {
+      doc.text(`${TUPCIDSTUDENT}`, 90, 50, {
         width: columnWidth,
         align: "left",
         bold: true,
