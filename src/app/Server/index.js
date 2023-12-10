@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const passport = require("passport");
 const expressSession = require("express-session");
 const cookieParser = require("cookie-parser");
 const bcryptjs = require("bcryptjs");
@@ -10,11 +9,10 @@ const nodemailer = require("nodemailer");
 const officegen = require("officegen");
 const romanize = require("romanize");
 const PDFDocument = require("pdfkit");
+
 const app = express();
 
-app.use(
-  cors()
-);
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
@@ -26,9 +24,6 @@ app.use(
 );
 
 app.use(cookieParser("mySecretKey"));
-app.use(passport.initialize());
-app.use(passport.session());
-require("./passportConfig")(passport);
 
 //START FUNCTIONS
 const checkExist = async (uidStudent, Uid_Professor, Uid_Section) => {
@@ -52,7 +47,8 @@ const checkExist = async (uidStudent, Uid_Professor, Uid_Section) => {
 
 const checkPublish = async (Uid_Test) => {
   try {
-    const query = "SELECT COUNT(*) as count from publish_test WHERE Uid_Test = ?";
+    const query =
+      "SELECT COUNT(*) as count from publish_test WHERE Uid_Test = ?";
     const [count] = await connection.query(query, [Uid_Test]);
     if (count[0].count === 0) {
       return true;
@@ -79,6 +75,26 @@ const getInfo = async (Student_Uid) => {
       "SELECT TUPCID, SURNAME, FIRSTNAME, MIDDLENAME FROM student_accounts WHERE uid = ?";
     const [row] = await connection.query(query, [Student_Uid]);
     return row;
+  } catch (err) {
+    return res.status(500).send({ message: "Internal server error" });
+  }
+};
+const sendAlert = async (GSFEACC) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "eos2022to2023@gmail.com",
+      pass: "ujfshqykrtepqlau",
+    },
+  });
+  const mailOptions = {
+    from: "eos2022to2023@gmail.com",
+    to: GSFEACC,
+    subject: "Alert!",
+    text: `Good day! Your Gsfe Account ${GSFEACC} is registered in tupcautochecker.online, if you are the one who registered disregard the message.`,
+  };
+  try {
+    await transporter.sendMail(mailOptions);
   } catch (err) {
     return res.status(500).send({ message: "Internal server error" });
   }
@@ -141,16 +157,19 @@ const checkAccount = async (TUPCID) => {
 // Checking the type of the TUPCID either student or faculty
 const checkType = async (table, Tupcid, Password, accountType) => {
   try {
-    const query = `SELECT * FROM ${table}_accounts WHERE TUPCID = ?`;
+    const query = `SELECT * FROM ${table}_accounts WHERE ${
+      table == "admin" ? "Account_Number = ?" : "TUPCID = ?"
+    }`;
     const [rows] = await connection.query(query, [Tupcid]);
     if (rows.length === 0) {
       return { accountType: null };
     }
     const user = rows[0];
-
-    const isPasswordMatch = await bcryptjs.compare(Password, user.PASSWORD);
+    let storedPassword = table === "admin" ? user.Password : user.PASSWORD;
+    let storedUid = table === "admin" ? user.Uid_Account : user.uid;
+    const isPasswordMatch = await bcryptjs.compare(Password,storedPassword );
     if (isPasswordMatch) {
-      return { accountType: accountType, uid: user.uid };
+      return { accountType: accountType, uid: storedUid };
     } else {
       return { accountType: null };
     }
@@ -196,6 +215,7 @@ app.post("/StudentRegister", async (req, res) => {
 
   //If the TUPCID is already registered
   try {
+    await sendAlert(GSFEACC);
     const isAccountExist = await checkAccount(TUPCID);
 
     if (isAccountExist) {
@@ -248,6 +268,7 @@ app.post("/FacultyRegister", async (req, res) => {
 
   //If the TUPCID is already registered
   try {
+    await sendAlert(GSFEACC);
     const isAccountExist = await checkAccount(TUPCID);
 
     if (isAccountExist) {
@@ -282,7 +303,7 @@ app.post("/FacultyRegister", async (req, res) => {
 //Login for student and Faculty
 app.post("/Login", async (req, res) => {
   const { Tupcid, Password } = req.body;
-
+  console.log(Tupcid, Password)
   try {
     const studentLoginResult = await checkType(
       "student",
@@ -296,8 +317,9 @@ app.post("/Login", async (req, res) => {
       Password,
       "faculty"
     );
+    const adminLoginResult = await checkType("admin", Tupcid, Password, "admin");
 
-    let accountType = '';
+    let accountType = "";
 
     if (studentLoginResult.accountType === "student") {
       res.json({ accountType: "student", Uid: studentLoginResult.uid });
@@ -305,39 +327,48 @@ app.post("/Login", async (req, res) => {
     } else if (facultyLoginResult.accountType === "faculty") {
       res.json({ accountType: "faculty", Uid: facultyLoginResult.uid });
       accountType = "faculty"; // Set account type for insertion
-    } else {
-      res.status(404).json({ message: "Account does not exist" });
-      return; 
+    } else if (adminLoginResult.accountType === "admin") {
+      res.json({ accountType: "admin", Uid: adminLoginResult.uid });
+      accountType = "admin"; // Set account type for insertion
+    }else {
+      res.status(404).json({ message: "Account or Password invalid" });
+      return;
     }
 
     // Set other data for insertion
-    const TUPCID = Tupcid; 
-    const PROFILE = accountType; 
-    const STATUS = 'ONLINE'; 
+    const TUPCID = Tupcid;
+    const PROFILE = accountType;
+    const STATUS = "ONLINE";
     const TIMESTAMP = new Date();
 
     // Check if there's a record with the same TUPCID and STATUS 'ONLINE'
-    const checkOnlineStatusQuery = 'SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?';
+    const checkOnlineStatusQuery =
+      "SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?";
     const checkOnlineStatusValues = [TUPCID, STATUS];
-    const [existingOnlineRecord] = await connection.query(checkOnlineStatusQuery, checkOnlineStatusValues);
+    const [existingOnlineRecord] = await connection.query(
+      checkOnlineStatusQuery,
+      checkOnlineStatusValues
+    );
 
     if (existingOnlineRecord.length > 0) {
       // If the record with 'ONLINE' status exists, update its timestamp
-      const updateLoginLogQuery = 'UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?';
+      const updateLoginLogQuery =
+        "UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?";
       const updateLoginLogValues = [TIMESTAMP, TUPCID, STATUS];
       await connection.query(updateLoginLogQuery, updateLoginLogValues);
     } else {
       // Insert into login_log table if no 'ONLINE' record exists
-      const loginLogQuery = 'INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+      const loginLogQuery =
+        "INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)";
       const loginLogValues = [TUPCID, PROFILE, STATUS, TIMESTAMP];
       await connection.query(loginLogQuery, loginLogValues);
     }
 
     // Insert into overalllogin_log table
-    const overallLoginLogQuery = 'INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+    const overallLoginLogQuery =
+      "INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)";
     const overallLoginLogValues = [TUPCID, PROFILE, STATUS, TIMESTAMP];
     await connection.query(overallLoginLogQuery, overallLoginLogValues);
-
   } catch (error) {
     console.error("Error during login:", error);
     res
@@ -346,28 +377,6 @@ app.post("/Login", async (req, res) => {
   }
 });
 
-
-
-
-
-//Admin Login
-app.post("/AdminLogin", async (req, res) => {
-  const { Account_Number, Password } = req.body;
-  try {
-    const query =
-      "SELECT Uid_Account, Password FROM admin_account WHERE Account_Number = ?";
-    const [row] = await connection.query(query, [Account_Number]);
-    const hash = await bcryptjs.compare(Password, row[0].Password);
-    if (hash) {
-      const { Uid_Account } = row[0];
-      return res.status(200).send({ Uid_Account });
-    } else {
-      return res.status(409).send({ message: "Wrong Password" });
-    }
-  } catch (err) {
-    return res.status(500).send({ message: "Internal server error" });
-  }
-});
 //Forgetpassword
 app.post("/ForgetPassword", async (req, res) => {
   const { TUPCID, GSFEACC } = req.query;
@@ -454,50 +463,46 @@ app.get("/Admin_Students", async (req, res) => {
     const [rows] = await connection.query(query);
 
     // Modify the date format for each row
-    const formattedRows = rows.map(row => {
-      
+    const formattedRows = rows.map((row) => {
       const date = new Date(row.REGISTEREDDATE);
-      const formattedDate = date.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
+      const formattedDate = date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
-      
+
       return {
         ...row,
-        REGISTEREDDATE: formattedDate
+        REGISTEREDDATE: formattedDate,
       };
     });
-    
+
     return res.status(200).json(formattedRows);
   } catch (err) {
     return res.status(500).send({ message: "Internal server error" });
   }
 });
 
-
-
 //Faculty
 app.get("/Admin_Faculty", async (req, res) => {
   try {
     const query = "SELECT * FROM faculty_accounts";
     const [row] = await connection.query(query);
-    const formattedRows = row.map(row => {
-      
+    const formattedRows = row.map((row) => {
       const date = new Date(row.REGISTEREDDATE);
-      const formattedDate = date.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
+      const formattedDate = date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
-      
+
       return {
         ...row,
-        REGISTEREDDATE: formattedDate
+        REGISTEREDDATE: formattedDate,
       };
     });
-    
-    return res.status(200).json(formattedRows); 
+
+    return res.status(200).json(formattedRows);
   } catch (err) {
     return res.status(500).send({ message: "Internal server error" });
   }
@@ -519,7 +524,7 @@ app.get("/AdminAside", async (req, res) => {
   const { Uid_Account } = req.query;
   try {
     const query =
-      "SELECT Account_Number, Username FROM admin_account WHERE Uid_Account = ?";
+      "SELECT Account_Number, Username FROM admin_accounts WHERE Uid_Account = ?";
     const [row] = await connection.query(query, [Uid_Account]);
     return res.status(200).json(row);
   } catch (err) {
@@ -577,25 +582,38 @@ app.get("/TestListSectionName", async (req, res) => {
 });
 
 //Checking TestName
-app.get("/CheckTestName", async(req, res) => {
-  const {TestName} = req.query;
-  try{
-    const query = "SELECT COUNT(*) as count FROM faculty_testlist WHERE TestName = ?";
-    const [count] = await connection.query(query, [TestName]);
-    console.log(count[0])
-    if (count[0].count > 0){
-      return res.status(409).send({message: "Existing Testname"})
-    }else{
-      return res.status(200).send({message:"Nice"});
+app.get("/CheckTestName", async (req, res) => {
+  const { TestName, Subject, SectionName, Semester } = req.query;
+  try {
+    const query =
+      "SELECT COUNT(*) as count FROM faculty_testlist WHERE TestName = ? AND Subject = ? AND Section_Name = ? AND Semester = ? ";
+    const [count] = await connection.query(query, [
+      TestName,
+      Subject,
+      SectionName,
+      Semester,
+    ]);
+    console.log(count[0]);
+    if (count[0].count > 0) {
+      return res.status(409).send({ message: "Existing Testname" });
+    } else {
+      return res.status(200).send({ message: "Nice" });
     }
-  }catch(err){
-    throw err
+  } catch (err) {
+    throw err;
   }
-})
+});
 
 app.post("/TestList", async (req, res) => {
-  const { TestName, Subject, UidTest, UidProf, SectionName, Semester, Uid_section } =
-    req.body;
+  const {
+    TestName,
+    Subject,
+    UidTest,
+    UidProf,
+    SectionName,
+    Semester,
+    Uid_section,
+  } = req.body;
   try {
     const infos = await getInfoProf(UidProf);
     const query1 =
@@ -636,15 +654,16 @@ app.post("/CheckPublish", async (req, res) => {
   try {
     const existingItems = [];
     for (let i = 0; i < Uids.length; i++) {
-      const query = "SELECT COUNT(*) as count FROM publish_test WHERE Uid_Test = ?"
+      const query =
+        "SELECT COUNT(*) as count FROM publish_test WHERE Uid_Test = ?";
       const [row] = await connection.query(query, [Uids[i]]);
-      if(row[0].count === 1){
-        existingItems.push(Uids[i])
+      if (row[0].count === 1) {
+        existingItems.push(Uids[i]);
       }
     }
     return res.status(200).json({ existingItems });
   } catch (err) {
-    throw err
+    throw err;
   }
 });
 
@@ -653,7 +672,7 @@ app.delete("/TestList", async (req, res) => {
   try {
     const query1 = "DELETE FROM publish_test WHERE Uid_Test = ?";
     const query = "DELETE FROM faculty_testlist WHERE Uid_Test = ?";
-    await connection.query(query1,[UidTest])
+    await connection.query(query1, [UidTest]);
     await connection.query(query, [UidTest]);
     return res.status(200).send({ message: "Done" });
   } catch (err) {
@@ -663,23 +682,32 @@ app.delete("/TestList", async (req, res) => {
 
 app.post("/PublishTest", async (req, res) => {
   const { Uid_Prof } = req.query;
-  const { TestName, UidTest, Subject, SectionName, Semester, SectionUid} = req.body;
+  const { TestName, UidTest, Subject, SectionName, Semester, SectionUid } =
+    req.body;
   const TupcId = await getInfoProf(Uid_Prof);
   try {
     const checking = await checkPublish(UidTest);
     if (checking) {
       const query =
         "INSERT INTO publish_test (Professor_ID, Uid_Professor, Section_Uid, Uid_Test, Subject, Section_Name, Semester, TestName) values (?, ?, ?, ?, ?, ?, ? ,?)";
-      await connection.query(query, [TupcId[0].TUPCID, Uid_Prof, SectionUid, UidTest, Subject, SectionName, Semester, TestName])
+      await connection.query(query, [
+        TupcId[0].TUPCID,
+        Uid_Prof,
+        SectionUid,
+        UidTest,
+        Subject,
+        SectionName,
+        Semester,
+        TestName,
+      ]);
       return res.status(200).send({ message: "Done" });
-    }else{
-      return res.status(409).send({ message: "Already publish"})
+    } else {
+      return res.status(409).send({ message: "Already publish" });
     }
   } catch (err) {
     throw err;
   }
 });
-
 
 //Faculty section
 app.put("/Faculty_sections", async (req, res) => {
@@ -794,57 +822,73 @@ app.put("/StudentTestList", async (req, res) => {
 app.get("/StudentSectionList", async (req, res) => {
   const { uidStudent } = req.query;
   try {
- 
     const queryTUPCID = "SELECT TUPCID FROM student_accounts WHERE uid = ?";
     const [accountRow] = await connection.query(queryTUPCID, [uidStudent]);
-    const TUPCID = accountRow[0]?.TUPCID; 
+    const TUPCID = accountRow[0]?.TUPCID;
 
     if (!TUPCID) {
-      return res.status(404).send({ message: "No TUPCID found for the provided uid" });
+      return res
+        .status(404)
+        .send({ message: "No TUPCID found for the provided uid" });
     }
 
-    const queryEnrolledSections = "SELECT * FROM enrolled_sections WHERE Student_Uid = ?";
+    const queryEnrolledSections =
+      "SELECT * FROM enrolled_sections WHERE Student_Uid = ?";
     const [row] = await connection.query(queryEnrolledSections, [uidStudent]);
-    
     if (row.length === 0) {
-      return res.status(404).send({ message: "No enrolled sections found for the student" });
+      return res
+        .status(404)
+        .send({ message: "No enrolled sections found for the student" });
     }
 
     const uidSections = row.map((section) => section.Section_Uid);
     const subjectsections = row.map((subject) => subject.Section_Subject);
 
-    const examUIDQuery = "SELECT * FROM publish_test WHERE Section_Uid IN (?) AND Subject IN (?)";
-    const [examRows] = await connection.query(examUIDQuery, [uidSections, subjectsections]);
+    const examUIDQuery =
+      "SELECT * FROM publish_test WHERE Section_Uid IN (?) AND Subject IN (?)";
+    const [examRows] = await connection.query(examUIDQuery, [
+      uidSections,
+      subjectsections,
+    ]);
 
-    
     if (examRows.length === 0) {
-      return res.status(404).send({ message: "No published tests found for the enrolled sections" });
+      return res
+        .status(404)
+        .send({
+          message: "No published tests found for the enrolled sections",
+        });
     }
     const examUIDs = examRows.map((exam) => exam.Uid_Test);
-    const scoreQuery = "SELECT TOTALSCORE, MAXSCORE FROM student_results WHERE TUPCID = ? AND UID IN (?)";
+    const scoreQuery =
+      "SELECT UID, TOTALSCORE, MAXSCORE FROM student_results WHERE TUPCID = ? AND UID IN (?)";
     const [scoreRows] = await connection.query(scoreQuery, [TUPCID, examUIDs]);
 
-    
+    const scoreMap = {};
+    scoreRows.forEach((score) => {
+      scoreMap[score.UID] = {
+        totalScore: score.TOTALSCORE,
+        maxScore: score.MAXSCORE,
+      };
+    });
+
     const combinedData = {
       enrolledSections: row,
       examUIDs: examUIDs,
-      studentScores: scoreRows,
-      testNameMap: examRows, 
+      studentScores: scoreMap,
+      testNameMap: examRows,
     };
+
     return res.status(200).send(combinedData);
-    
   } catch (err) {
     console.error(err);
     return res.status(500).send({ message: "Problem at the server" });
   }
 });
 
-
-
 //Settings
 //DEMO
-app.get("/facultyinfos/:TUPCID", async (req, res) => {
-  const { TUPCID } = req.params;
+app.get("/facultyinfos", async (req, res) => {
+  const { TUPCID } = req.query;
   try {
     const query = "SELECT * from faculty_accounts WHERE uid = ?";
     const [getall] = await connection.query(query, [TUPCID]);
@@ -965,7 +1009,8 @@ app.put("/updatestudentinfos", async (req, res) => {
 
 app.post("/createtestpaper", async (req, res) => {
   try {
-    const { TUPCID, UID, test_name, section_name, subject, semester,data } = req.body;
+    const { TUPCID, UID, test_name, section_name, subject, semester, data } =
+      req.body;
     console.log("Check receiving data....", TUPCID);
 
     const query = `
@@ -995,9 +1040,9 @@ app.post("/createtestpaper", async (req, res) => {
   }
 });
 
-app.put("/updatetestpaper/:TUPCID/:uid/:section_name", async (req, res) => {
+app.put("/updatetestpaper", async (req, res) => {
   try {
-    const { TUPCID, uid, section_name } = req.params;
+    const { TUPCID, uid, section_name } = req.query;
     const { data } = req.body;
     const updateQuery = `
       UPDATE testpapers
@@ -1020,7 +1065,6 @@ app.put("/updatetestpaper/:TUPCID/:uid/:section_name", async (req, res) => {
   }
 });
 
-
 app.get("/generateTestPaperpdf/:uid", async (req, res) => {
   try {
     const { uid } = req.params;
@@ -1029,21 +1073,20 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
       SELECT questions, semester, subject ,test_name FROM testpapers WHERE UID_test = ?;
     `;
 
-
     console.log("response....", uid);
 
     const [testdata] = await connection.query(query, [uid]);
-    
+
     console.log("response....", testdata);
 
-    const questionsData = testdata[0].questions;
+    const questionsData = JSON.parse(testdata[0].questions);
     const test_name = testdata[0].test_name;
     const semester = testdata[0].semester;
     const subject = testdata[0].subject;
 
     // Create a new PDF document
     const doc = new PDFDocument({
-      layout: 'portrait',
+      layout: "portrait",
       margins: {
         top: 50,
         bottom: 50,
@@ -1054,31 +1097,37 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
     const filename = ` ${test_name}.pdf`;
 
     // Set the title based on TEST NUMBER and TEST NAME
-    const title = doc.text(`${semester}: ${subject}  ${test_name}               UID:${uid}`, {
-      bold: true,
-      fontSize: 24,
-      align: "left",
-    });
+    const title = doc.text(
+      `${semester}: ${subject}  ${test_name}               UID:${uid}`,
+      {
+        bold: true,
+        fontSize: 24,
+        align: "left",
+      }
+    );
     doc.moveDown();
-    const boxX = 65; 
-    const boxY = 80; 
-    const boxWidth = 520; 
-    const boxHeight = 120; 
-    
+    const boxX = 65;
+    const boxY = 80;
+    const boxWidth = 520;
+    const boxHeight = 180;
+
     // Draw a rectangle
     doc.rect(boxX, boxY, boxWidth, boxHeight).stroke();
-    
+
     // Text to be placed inside the box
-    const directionsText = `    GENERAL DIRECTIONS:
+    const directionsText = `    GENERAL INSTRUCTIONS:
     1. STRICTLY NO ERASURE AND READ DIRECTIONS 
-    2. ANSWER IN ORDER AND COMPLETELY 
-    3. PUT YOUR ANSWER IN THE CORRESPONDING BOXES
-    4. PUT EXTRA SPACE PER LETTER`;
-    
+    2. WRITE IN UPPERCASE ANSWER IN ORDER AND COMPLETELY 
+    3. PUT YOUR ANSWER IN THE CORRESPONDING BOXES ONLY
+    4. PUT EXTRA SPACE PER LETTER
+    5. WRITE IN ENGINEERING LETTER
+    EXAMPLE:
+    A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+    0 1 2 3 4 5 6 7 8 9`;
 
     doc.text(directionsText, boxX + 50, boxY + 10, {
-      width: boxWidth - 20, 
-      lineGap: 10, 
+      width: boxWidth - 20,
+      lineGap: 5,
       fontSize: 12,
     });
     doc.moveDown();
@@ -1116,29 +1165,27 @@ app.get("/generateTestPaperpdf/:uid", async (req, res) => {
         let instructions = "";
         if (questionType === "MultipleChoice") {
           displayText = "Multiple Choice";
-          instructions =
-            "Among the given OPTIONS in the questionnaire, choose the best option and write it in CAPITAL LETTER.";
+          instructions = "";
         } else if (questionType === "TrueFalse") {
           displayText = "TRUE or FALSE";
           instructions =
             "Write T if the statement is TRUE or F if the statement is FALSE.";
         } else if (questionType === "Identification") {
           displayText = "Identification";
-          instructions = "Write the ANSWER in CAPITAL LETTER.";
+          instructions = "";
         }
 
         const score = questionsOfType[0].score;
         doc.moveDown();
         const ptsText = score > 1 ? "pts. each" : score === 1 ? "pt." : "";
-const questionTypeHeading = doc.text(
-  `TEST ${romanNumeral}. ${displayText} (${score} ${ptsText} each)`,
-  {
-    bold: true,
-    fontSize: 16,
-    color: "black",
-  }
-);
-
+        const questionTypeHeading = doc.text(
+          `TEST ${romanNumeral}. ${displayText} (${score} ${ptsText} each)`,
+          {
+            bold: true,
+            fontSize: 16,
+            color: "black",
+          }
+        );
 
         // Add the instructions
         const instructionParagraph = doc.text(instructions, {
@@ -1152,7 +1199,7 @@ const questionTypeHeading = doc.text(
         questionsOfType.forEach((questionData, index) => {
           // Check if a new column should be started
           if (index > 0 && index % 20 === 0) {
-            questionTypeHeading.addPage(); 
+            questionTypeHeading.addPage();
           }
 
           const questionParagraph = doc.text(
@@ -1182,7 +1229,7 @@ const questionTypeHeading = doc.text(
         });
 
         testCounter++;
-        doc.moveDown(); 
+        doc.moveDown();
       }
     }
 
@@ -1208,10 +1255,10 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
     `;
 
     const [testdata] = await connection.query(query, [uid]);
-    console.log("testdata: ", testdata)
+    console.log("testdata: ", testdata);
 
     // Extract the questions, test_number, and test_name from the database response
-    const questionsData = testdata[0].questions;
+    const questionsData = JSON.parse(testdata[0].questions);
     const test_name = testdata[0].test_name;
     const semester = testdata[0].semester;
     const subject = testdata[0].subject;
@@ -1233,14 +1280,26 @@ app.get("/generateTestPaperdoc/:uid", async (req, res) => {
       color: "black",
     });
 
-    addStyledParagraph('GENERAL DIRECTIONS:', { bold: true });
-addStyledParagraph('1. STRICTLY NO ERASURE AND READ DIRECTIONS', { bold: true });
-addStyledParagraph('2. ANSWER IN ORDER AND COMPLETELY', { bold: true });
-addStyledParagraph('3. PUT YOUR ANSWER IN THE CORRESPONDING BOXES ', { bold: true });
-addStyledParagraph('4. PUT EXTRA SPACE PER LETTER', { bold: true });
+    addStyledParagraph("GENERAL INSTRUCTIONS:", { bold: true });
+    addStyledParagraph("1. STRICTLY NO ERASURE AND READ DIRECTIONS", {
+      bold: true,
+    });
+    addStyledParagraph(
+      "2. WRITE IN UPPERCASE ANSWER IN ORDER AND COMPLETELY ",
+      { bold: true }
+    );
+    addStyledParagraph("3. PUT YOUR ANSWER IN THE CORRESPONDING BOXES ONLY", {
+      bold: true,
+    });
+    addStyledParagraph("4. PUT EXTRA SPACE PER LETTER", { bold: true });
+    addStyledParagraph("5. WRITE IN ENGINEERING LETTER", { bold: true });
+    addStyledParagraph("EXAMPLE:", { bold: true });
+    addStyledParagraph(" A B C D E F G H I J K L M N O P Q R S T U V W X Y Z", {
+      bold: true,
+    });
+    addStyledParagraph(" 0 1 2 3 4 5 6 7 8 9", { bold: true });
 
-
-    docx.createP().addText('')
+    docx.createP().addText("");
     const groupedQuestions = {};
 
     // Group questions by questionType
@@ -1274,32 +1333,24 @@ addStyledParagraph('4. PUT EXTRA SPACE PER LETTER', { bold: true });
         let instructions = "";
         if (questionType === "MultipleChoice") {
           displayText = "Multiple Choice";
-          instructions =
-            "Among the given OPTIONS in the questionnaire, choose the best option and write it in CAPITAL LETTER.";
+          instructions = "";
         } else if (questionType === "TrueFalse") {
           displayText = "TRUE or FALSE";
           instructions =
             "Write T if the statement is TRUE or F if the statement is FALSE.";
         } else if (questionType === "Identification") {
           displayText = "Identification";
-          instructions = "Write the ANSWER in CAPITAL LETTER.";
         }
 
         const score = questionsOfType[0].score;
-        docx
-          .createP()
-          .addText(
-            `TEST ${romanNumeral}. ${displayText} (${score} pts. each)`,
-            {
-              bold: true,
-              fontSize: 16,
-              color: "black",
-            }
-          );
-
-        docx
-          .createP()
-          .addText(`Follow the directions and STRICTLY NO ERASURE.`);
+        addStyledParagraph(
+          `TEST ${romanNumeral}. ${displayText} (${score} pts. each)`,
+          {
+            bold: true,
+            fontSize: 16,
+            color: "black",
+          }
+        );
 
         addStyledParagraph(instructions, {
           fontSize: 12,
@@ -1310,7 +1361,7 @@ addStyledParagraph('4. PUT EXTRA SPACE PER LETTER', { bold: true });
 
         questionsOfType.forEach((questionData, index) => {
           if (index > 0 && index % 20 === 0) {
-            docx.createP().addText('\f');
+            docx.createP().addText("\f");
           }
 
           addStyledParagraph(`${questionNumber}. ${questionData.question}`, {
@@ -1350,27 +1401,22 @@ addStyledParagraph('4. PUT EXTRA SPACE PER LETTER', { bold: true });
   }
 });
 
-app.get("/getquestionstypeandnumber/:TUPCID/:uid", async (req, res) => {
-  const { TUPCID, uid } = req.params;
+app.get("/getquestionstypeandnumber", async (req, res) => {
+  const { TUPCID, uid } = req.query;
 
   try {
     // Construct the SQL query to retrieve the questions data
-    const query = `
-      SELECT questions
-      FROM testpapers
-      WHERE Professor_ID = ? AND UID_test = ?;
-    `;
+    const query =
+      "SELECT questions FROM testpapers WHERE Professor_ID = ? AND UID_test = ?";
 
-    console.log("tupcid: ", TUPCID)
-    console.log("uid: ", uid)
+    console.log("tupcid: ", TUPCID);
+    console.log("uid: ", uid);
     // Execute the query with the provided parameters
     const [testdata] = await connection.query(query, [TUPCID, uid]);
 
     if (testdata.length >= 1) {
-      console.log("Found test data for UID:", uid);
-
       // Extract questions data from the response
-      const questionsData = testdata[0].questions;
+      const questionsData = JSON.parse(testdata[0].questions);
 
       // Extract questionNumber and questionType from questionsData
       const questionNumbers = questionsData.map(
@@ -1388,7 +1434,6 @@ app.get("/getquestionstypeandnumber/:TUPCID/:uid", async (req, res) => {
 
       res.status(200).json(responseData);
     } else {
-      console.log("Test data not found for UID:", uid);
       res.status(404).json({ error: "test data not found" });
     }
   } catch (error) {
@@ -1406,8 +1451,8 @@ app.get("/generateAnswerSheet/:uid/:sectionname", async (req, res) => {
     // Fetch data from the database based on the parameters
     const query = `
     SELECT questions, test_name
-FROM testpapers
-WHERE TRIM(UID_test) = ?;
+    FROM testpapers
+    WHERE TRIM(UID_test) = ?;
   `;
 
     const query2 = `
@@ -1417,12 +1462,11 @@ WHERE TRIM(UID_test) = ?;
     WHERE e.section_name = ?;
     `;
 
-   
     const [testData] = await connection.query(query, [uid.trim()]);
-    console.log('Test data:', testData);
+    console.log("Test data:", testData);
 
     // Execute the second query to fetch data from 'enrollments' and 'student_accounts'
-    const [studentData] = await connection.query(query2,[sectionname]);
+    const [studentData] = await connection.query(query2, [sectionname]);
     console.log("students: ", studentData);
 
     const test_name = testData[0].test_name;
@@ -1438,46 +1482,34 @@ WHERE TRIM(UID_test) = ?;
       },
     });
     const filename = `${test_name}.pdf`;
+    const middleY = doc.page.width / 2;
 
+    // Set the initial position for the dashed line
+    doc.moveTo(middleY, 0).lineTo(middleY, 800).dash(3, { space: 5 }).stroke();
+
+    // Reset the dash settings to default for further drawings
+    doc.undash();
     // Define the box size and spacing
     const boxSize = 15;
     const boxSpacing = 1;
     const boxesPerQuestion = 10;
 
     // Define the line weight for boxes
-    const boxLineWeight = 0.5;
+    const boxLineWeight = 0.01;
     doc.fontSize(10);
 
     const boxStrokeColor = "#818582";
-    
+
     if (studentData.length == 0) {
       const TUPCIDSTUDENT = "TUPC-XX-XXXX";
       const FIRSTNAME = "FIRSTNAME";
-      const SURNAME = "SURNAME"
+      const SURNAME = "SURNAME";
 
       // Define column widths and spacing
       const columnWidth = 200;
       doc.lineWidth(5);
 
-      // First rectangle information
-      doc.rect(70, 30, columnWidth + 299, 110).stroke();
-      doc.text(`${TUPCIDSTUDENT}`, 90, 50, {
-        width: columnWidth,
-        align: "left",
-        bold: true,
-      });
-      doc.text(`NAME: ${SURNAME}, ${FIRSTNAME}`, 90, 70, {
-        width: columnWidth,
-        align: "left",
-        bold: true,
-      });
-      doc.text(`TESTNAME: ${test_name}  UID: ${uid}`, 150, 90, {
-        width: columnWidth + 100,
-        align: "center",
-        bold: true,
-      });
-
-      const questionsData = testData[0].questions;
+      const questionsData = JSON.parse(testData[0].questions);
       const groupedQuestions = {};
 
       questionsData.forEach((item) => {
@@ -1499,32 +1531,80 @@ WHERE TRIM(UID_test) = ?;
         const questionsOfType = groupedQuestions[questionType];
 
         if (questionsOfType.length > 0) {
-          // Determine the display text based on question type
           let displayText = ``;
 
           if (questionType === "MultipleChoice") {
-            displayText = "MULTIPLE CHOICE";
+            displayText = "                MULTIPLE CHOICE";
           } else if (questionType === "TrueFalse") {
-            displayText = "TRUE OR FALSE";
+            displayText = "                TRUE OR FALSE";
           } else if (questionType === "Identification") {
-            displayText = "IDENTIFICATION";
+            displayText = "                 IDENTIFICATION";
           }
-
+          // Determine the display text based on question type
           let alignment = "left";
+          //Names
+
+          doc.text(`${SURNAME}`, 95, 70, {
+            width: columnWidth + 270,
+            fontSize: 12,
+            align: alignment,
+            bold: true,
+          });
+
+          doc.moveDown(0.5);
+
+          doc.text(`TUPCID: ${TUPCIDSTUDENT}`, {
+            width: columnWidth + 270,
+            fontSize: 12,
+            align: alignment,
+            bold: true,
+          });
+
+          doc.moveDown(0.5);
+          doc.text(`UID: ${uid}`, {
+            width: columnWidth + 210,
+            fontSize: 12,
+            align: alignment,
+            bold: true,
+          });
+
           if (questionsOfType[0].type === "TYPE 2") {
             typeoftest = "TYPE 2";
             alignment = "center";
-          } else if (questionsOfType[0].type === "TYPE 3") {
-            typeoftest = "TYPE 3";
-            alignment = "right";
+          }
+          //<10
+
+          if (questionType.length > 1) {
+            doc.text(`${SURNAME}`, 70, 70, {
+              width: columnWidth + 185,
+              fontSize: 12,
+              align: "right",
+              bold: true,
+            });
+            doc.moveDown(0.5);
+            doc.text(`TUPCID: ${TUPCIDSTUDENT}`, {
+              width: columnWidth + 250,
+              fontSize: 12,
+              align: "right",
+              bold: true,
+            });
+            doc.moveDown(0.5);
+            doc.text(`UID: ${uid}`, {
+              width: columnWidth + 200,
+              fontSize: 12,
+              align: "right",
+              bold: true,
+            });
+          } else {
           }
 
           if (
+            //Goods
             questionsOfType[0].type === "TYPE 1" &&
             questionType === "MultipleChoice"
           ) {
             doc
-              .rect(70, 160, columnWidth - 100, 600)
+              .rect(35, 40, columnWidth + 30, 700)
               .stroke()
               .strokeColor("black");
           } else if (
@@ -1532,7 +1612,7 @@ WHERE TRIM(UID_test) = ?;
             questionType === "TrueFalse"
           ) {
             doc
-              .rect(70, 160, columnWidth - 60, 600)
+              .rect(35, 40, columnWidth + 30, 700)
               .stroke()
               .strokeColor("black");
           } else if (
@@ -1540,119 +1620,106 @@ WHERE TRIM(UID_test) = ?;
             questionType === "Identification"
           ) {
             doc
-              .rect(70, 160, columnWidth + 35, 600)
+              .rect(35, 40, columnWidth + 30, 700)
               .stroke()
               .strokeColor("black");
           }
-
+          //Type 2 boxes
           if (
             questionsOfType[0].type === "TYPE 2" &&
             questionType === "MultipleChoice"
           ) {
             doc
-              .rect(70 + 165, 160, columnWidth - 60, 600)
+              .rect(70 + 275, 40, columnWidth + 30, 700)
               .stroke()
               .strokeColor("black");
           } else if (
+            //Goods
             questionsOfType[0].type === "TYPE 2" &&
             questionType === "TrueFalse"
           ) {
             doc
-              .rect(70 + 130, 160, columnWidth - 100, 600)
+              .rect(70 + 275, 40, columnWidth + 30, 700)
               .stroke()
               .strokeColor("black");
           } else if (
+            //Goods
             questionsOfType[0].type === "TYPE 2" &&
             questionType === "Identification"
           ) {
             doc
-              .rect(70 + 130, 160, columnWidth + 35, 600)
+              .rect(70 + 275, 40, columnWidth + 30, 700)
               .stroke()
               .strokeColor("black");
           }
 
-          if (
-            questionsOfType[0].type === "TYPE 3" &&
-            questionType === "MultipleChoice"
-          ) {
-            doc
-              .rect(70 + 330, 160, columnWidth - 60, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 3" &&
-            questionType === "TrueFalse"
-          ) {
-            doc
-              .rect(70 + 330, 160, columnWidth - 60, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 3" &&
-            questionType === "Identification"
-          ) {
-            doc
-              .rect(70 + 265, 160, columnWidth + 35, 600)
-              .stroke()
-              .strokeColor("black");
-          }
-
-          doc.lineWidth(5); // Set the line thickness back to the default value (adjust as needed)
-
-          doc.text(`${displayText}`, 90, 120, {
-            width: columnWidth + 220,
+          //nice
+          doc.text(`${displayText}`, 50, 140, {
+            width: columnWidth + 556,
             align: alignment,
           });
-
-          doc.moveDown(6);
-
           let questionNumber = 1;
+
+          //<10
+          doc.moveDown(3);
           questionsOfType.forEach(() => {
             if (questionNumber <= 9) {
-              if (questionType === "Identification") {
+              if (
+                questionType === "Identification" &&
+                questionsOfType[0].type === "TYPE 2"
+              ) {
+                //Goods
                 doc.text(`${questionNumber}.  `, {
                   bold: true,
                   fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
+                  width: columnWidth + 118,
+                  align: "right",
                 });
-              } else if (questionType === "TrueFalse") {
+              } else if (
+                questionType === "TrueFalse" &&
+                questionsOfType[0].type === "TYPE 2"
+              ) {
                 doc.text(`${questionNumber}.   `, {
                   bold: true,
                   fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
+                  width: columnWidth + 118,
+                  align: "right",
                 });
               } else {
-                doc.text(`${questionNumber}.    `, {
+                doc.text(`${questionNumber}.   `, {
                   bold: true,
                   fontSize: 12,
-                  width: columnWidth + 220,
-                  align: alignment,
+                  width: columnWidth + 200,
+                  align: "left",
                 });
               }
             }
-
             if (questionNumber >= 10) {
-              if (questionType === "Identification") {
+              if (
+                questionType === "Identification" &&
+                questionsOfType[0].type === "TYPE 2"
+              ) {
                 doc.text(`${questionNumber}.  `, {
                   bold: true,
                   fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
+                  width: columnWidth + 118,
+                  align: "right",
                 });
-              } else if (questionType === "TrueFalse") {
+              } else if (
+                questionType === "TrueFalse" &&
+                questionsOfType[0].type === "TYPE 2"
+              ) {
                 doc.text(`${questionNumber}.   `, {
                   bold: true,
                   fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
+                  width: columnWidth + 118,
+                  align: "right",
                 });
               } else {
-                doc.text(`${questionNumber}.    `, {
+                doc.text(`${questionNumber}.   `, {
                   bold: true,
                   fontSize: 12,
-                  width: columnWidth + 220,
+                  width: columnWidth + 325,
                   align: alignment,
                 });
               }
@@ -1660,11 +1727,12 @@ WHERE TRIM(UID_test) = ?;
 
             // BOXES
             if (
+              //Goods
               questionType === "MultipleChoice" &&
               questionsOfType[0].type === "TYPE 1"
             ) {
               doc
-                .rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
+                .rect(doc.x + 45 + boxSpacing, doc.y - 16, boxSize, boxSize)
                 .lineWidth(boxLineWeight)
                 .stroke("#adb8af")
                 .strokeColor("black");
@@ -1673,7 +1741,7 @@ WHERE TRIM(UID_test) = ?;
               questionsOfType[0].type === "TYPE 1"
             ) {
               doc
-                .rect(doc.x + 45, doc.y - 19.5, 140, boxSize)
+                .rect(doc.x + 45, doc.y - 16, 140, boxSize)
                 .lineWidth(boxLineWeight)
                 .stroke("#adb8af")
                 .strokeColor("black");
@@ -1682,7 +1750,7 @@ WHERE TRIM(UID_test) = ?;
               questionsOfType[0].type === "TYPE 1"
             ) {
               doc
-                .rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
+                .rect(doc.x + 45 + boxSpacing, doc.y - 16, boxSize, boxSize)
                 .lineWidth(boxLineWeight)
                 .stroke("#adb8af")
                 .strokeColor("black");
@@ -1691,7 +1759,7 @@ WHERE TRIM(UID_test) = ?;
               questionsOfType[0].type === "TYPE 2"
             ) {
               doc
-                .rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
+                .rect(doc.x + 365, doc.y - 16, boxSize, boxSize)
                 .lineWidth(boxLineWeight)
                 .stroke("#adb8af")
                 .strokeColor("black");
@@ -1700,43 +1768,17 @@ WHERE TRIM(UID_test) = ?;
               questionsOfType[0].type === "TYPE 2"
             ) {
               doc
-                .rect(doc.x + 175, doc.y - 19.5, 140, boxSize)
+                .rect(doc.x + 365, doc.y - 16, 140, boxSize)
                 .lineWidth(boxLineWeight)
                 .stroke("#adb8af")
                 .strokeColor("black");
             } else if (
+              //Goods
               questionType === "TrueFalse" &&
               questionsOfType[0].type === "TYPE 2"
             ) {
               doc
-                .rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
-                .strokeColor("black");
-            } else if (
-              questionType === "MultipleChoice" &&
-              questionsOfType[0].type === "TYPE 3"
-            ) {
-              doc
-                .rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
-                .strokeColor("black");
-            } else if (
-              questionType === "Identification" &&
-              questionsOfType[0].type === "TYPE 3"
-            ) {
-              doc
-                .rect(doc.x + 320, doc.y - 19.5, 140, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
-                .strokeColor("black");
-            } else if (
-              questionType === "TrueFalse" &&
-              questionsOfType[0].type === "TYPE 3"
-            ) {
-              doc
-                .rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
+                .rect(doc.x + 365, doc.y - 16, boxSize, boxSize)
                 .lineWidth(boxLineWeight)
                 .stroke("#adb8af")
                 .strokeColor("black");
@@ -1753,322 +1795,308 @@ WHERE TRIM(UID_test) = ?;
       doc.lineWidth(5);
 
       doc.moveDown(4);
-
-    
-    
     } else {
-    for (const student of studentData) {
-      // Extract student information
-      const { Student_TUPCID, FIRSTNAME, SURNAME } = student;
-      const uppercasedFirstName = FIRSTNAME.toUpperCase();
-      const uppercasedSurname = SURNAME.toUpperCase();
+      for (const student of studentData) {
+        // Extract student information
+        const { Student_TUPCID, FIRSTNAME, SURNAME } = student;
+        const uppercasedFirstName = FIRSTNAME.toUpperCase();
+        const uppercasedSurname = SURNAME.toUpperCase();
 
-      // Define column widths and spacing
-      const columnWidth = 200;
-      doc.lineWidth(5);
+        // Define column widths and spacing
+        const columnWidth = 200;
+        doc.lineWidth(5);
 
-      // First rectangle information
-      doc.rect(70, 30, columnWidth + 299, 110).stroke();
-      doc.text(`${Student_TUPCID}`, 90, 50, {
-        width: columnWidth,
-        align: "left",
-        bold: true,
-      });
-      doc.text(`NAME: ${uppercasedSurname}, ${uppercasedFirstName}`, 90, 70, {
-        width: columnWidth,
-        align: "left",
-        bold: true,
-      });
-      doc.text(`TESTNAME: ${test_name}  UID: ${uid}`, 150, 90, {
-        width: columnWidth + 100,
-        align: "center",
-        bold: true,
-      });
-    
+        // First rectangle informatiom
 
-      const questionsData = testData[0].questions;
-      const groupedQuestions = {};
+        const questionsData = JSON.parse(testData[0].questions);
+        const groupedQuestions = {};
 
-      questionsData.forEach((item) => {
-        const questionType = item.questionType;
-        const type = item.type;
+        questionsData.forEach((item) => {
+          const questionType = item.questionType;
+          const type = item.type;
 
-        if (questionType) {
-          if (!groupedQuestions[questionType]) {
-            groupedQuestions[questionType] = [];
+          if (questionType) {
+            if (!groupedQuestions[questionType]) {
+              groupedQuestions[questionType] = [];
+            }
+            groupedQuestions[questionType].push({
+              questionNumber: item.questionNumber,
+              type: item.type,
+            });
           }
-          groupedQuestions[questionType].push({
-            questionNumber: item.questionNumber,
-            type: item.type,
-          });
-        }
-      });
+        });
 
-      for (const questionType in groupedQuestions) {
-        const questionsOfType = groupedQuestions[questionType];
+        for (const questionType in groupedQuestions) {
+          const questionsOfType = groupedQuestions[questionType];
 
-        if (questionsOfType.length > 0) {
-          // Determine the display text based on question type
-          let displayText = ``;
+          if (questionsOfType.length > 0) {
+            let displayText = ``;
 
-          if (questionType === "MultipleChoice") {
-            displayText = "MULTIPLE CHOICE";
-          } else if (questionType === "TrueFalse") {
-            displayText = "TRUE OR FALSE";
-          } else if (questionType === "Identification") {
-            displayText = "IDENTIFICATION";
-          }
+            if (questionType === "MultipleChoice") {
+              displayText = "                MULTIPLE CHOICE";
+            } else if (questionType === "TrueFalse") {
+              displayText = "                TRUE OR FALSE";
+            } else if (questionType === "Identification") {
+              displayText = "                 IDENTIFICATION";
+            }
+            // Determine the display text based on question type
+            let alignment = "left";
+            //Names
+            doc.text(`${(uppercasedFirstName, uppercasedSurname)}`, 95, 70, {
+              width: columnWidth + 270,
+              fontSize: 12,
+              align: alignment,
+              bold: true,
+            });
+            doc.moveDown(0.5);
+            doc.text(`TUPCID: ${Student_TUPCID}`, {
+              width: columnWidth + 270,
+              fontSize: 12,
+              align: alignment,
+              bold: true,
+            });
+            doc.moveDown(0.5);
+            doc.text(`UID: ${uid}`, {
+              width: columnWidth + 210,
+              fontSize: 12,
+              align: alignment,
+              bold: true,
+            });
 
-          let alignment = "left";
-          if (questionsOfType[0].type === "TYPE 2") {
-            typeoftest = "TYPE 2";
-            alignment = "center";
-          } else if (questionsOfType[0].type === "TYPE 3") {
-            typeoftest = "TYPE 3";
-            alignment = "right";
-          }
+            if (questionsOfType[0].type === "TYPE 2") {
+              typeoftest = "TYPE 2";
+              alignment = "center";
+            }
+            //<10
 
-          if (
-            questionsOfType[0].type === "TYPE 1" &&
-            questionType === "MultipleChoice"
-          ) {
-            doc
-              .rect(70, 160, columnWidth - 100, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 1" &&
-            questionType === "TrueFalse"
-          ) {
-            doc
-              .rect(70, 160, columnWidth - 60, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 1" &&
-            questionType === "Identification"
-          ) {
-            doc
-              .rect(70, 160, columnWidth + 35, 600)
-              .stroke()
-              .strokeColor("black");
-          }
-
-          if (
-            questionsOfType[0].type === "TYPE 2" &&
-            questionType === "MultipleChoice"
-          ) {
-            doc
-              .rect(70 + 165, 160, columnWidth - 60, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 2" &&
-            questionType === "TrueFalse"
-          ) {
-            doc
-              .rect(70 + 130, 160, columnWidth - 100, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 2" &&
-            questionType === "Identification"
-          ) {
-            doc
-              .rect(70 + 130, 160, columnWidth + 35, 600)
-              .stroke()
-              .strokeColor("black");
-          }
-
-          if (
-            questionsOfType[0].type === "TYPE 3" &&
-            questionType === "MultipleChoice"
-          ) {
-            doc
-              .rect(70 + 330, 160, columnWidth - 60, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 3" &&
-            questionType === "TrueFalse"
-          ) {
-            doc
-              .rect(70 + 330, 160, columnWidth - 60, 600)
-              .stroke()
-              .strokeColor("black");
-          } else if (
-            questionsOfType[0].type === "TYPE 3" &&
-            questionType === "Identification"
-          ) {
-            doc
-              .rect(70 + 265, 160, columnWidth + 35, 600)
-              .stroke()
-              .strokeColor("black");
-          }
-
-          doc.lineWidth(5); // Set the line thickness back to the default value (adjust as needed)
-
-          doc.text(`${displayText}`, 90, 120, {
-            width: columnWidth + 220,
-            align: alignment,
-          });
-
-          doc.moveDown(6);
-
-          let questionNumber = 1;
-          questionsOfType.forEach(() => {
-            if (questionNumber <= 9) {
-              if (questionType === "Identification") {
-                doc.text(`${questionNumber}.  `, {
-                  bold: true,
-                  fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
-                });
-              } else if (questionType === "TrueFalse") {
-                doc.text(`${questionNumber}.   `, {
-                  bold: true,
-                  fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
-                });
-              } else {
-                doc.text(`${questionNumber}.    `, {
-                  bold: true,
-                  fontSize: 12,
-                  width: columnWidth + 220,
-                  align: alignment,
-                });
-              }
+            if (questionsOfType.length > 1) {
+              doc.text(`${(uppercasedFirstName, uppercasedSurname)}`, 72, 70, {
+                width: columnWidth + 185,
+                fontSize: 12,
+                align: "right",
+                bold: true,
+              });
+              doc.moveDown(0.5);
+              doc.text(`TUPCID: ${Student_TUPCID}`, {
+                width: columnWidth + 250,
+                fontSize: 12,
+                align: "right",
+                bold: true,
+              });
+              doc.moveDown(0.5);
+              doc.text(`UID: ${uid}`, {
+                width: columnWidth + 200,
+                fontSize: 12,
+                align: "right",
+                bold: true,
+              });
+            } else {
             }
 
-            if (questionNumber >= 10) {
-              if (questionType === "Identification") {
-                doc.text(`${questionNumber}.  `, {
-                  bold: true,
-                  fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
-                });
-              } else if (questionType === "TrueFalse") {
-                doc.text(`${questionNumber}.   `, {
-                  bold: true,
-                  fontSize: 12,
-                  width: columnWidth + 80,
-                  align: alignment,
-                });
-              } else {
-                doc.text(`${questionNumber}.    `, {
-                  bold: true,
-                  fontSize: 12,
-                  width: columnWidth + 220,
-                  align: alignment,
-                });
-              }
-            }
-
-            // BOXES
             if (
-              questionType === "MultipleChoice" &&
-              questionsOfType[0].type === "TYPE 1"
+              //Goods
+              questionsOfType[0].type === "TYPE 1" &&
+              questionType === "MultipleChoice"
             ) {
               doc
-                .rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
+                .rect(35, 40, columnWidth + 30, 700)
+                .stroke()
                 .strokeColor("black");
             } else if (
-              questionType === "Identification" &&
-              questionsOfType[0].type === "TYPE 1"
+              questionsOfType[0].type === "TYPE 1" &&
+              questionType === "TrueFalse"
             ) {
               doc
-                .rect(doc.x + 45, doc.y - 19.5, 140, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
+                .rect(35, 40, columnWidth + 30, 700)
+                .stroke()
                 .strokeColor("black");
             } else if (
-              questionType === "TrueFalse" &&
-              questionsOfType[0].type === "TYPE 1"
+              questionsOfType[0].type === "TYPE 1" &&
+              questionType === "Identification"
             ) {
               doc
-                .rect(doc.x + 45 + boxSpacing, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
+                .rect(35, 40, columnWidth + 30, 700)
+                .stroke()
+                .strokeColor("black");
+            }
+            //Type 2 boxes
+            if (
+              questionsOfType[0].type === "TYPE 2" &&
+              questionType === "MultipleChoice"
+            ) {
+              doc
+                .rect(70 + 275, 40, columnWidth + 30, 700)
+                .stroke()
                 .strokeColor("black");
             } else if (
-              questionType === "MultipleChoice" &&
-              questionsOfType[0].type === "TYPE 2"
+              //Goods
+              questionsOfType[0].type === "TYPE 2" &&
+              questionType === "TrueFalse"
             ) {
               doc
-                .rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
+                .rect(70 + 275, 40, columnWidth + 30, 700)
+                .stroke()
                 .strokeColor("black");
             } else if (
-              questionType === "Identification" &&
-              questionsOfType[0].type === "TYPE 2"
+              //Goods
+              questionsOfType[0].type === "TYPE 2" &&
+              questionType === "Identification"
             ) {
               doc
-                .rect(doc.x + 175, doc.y - 19.5, 140, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
-                .strokeColor("black");
-            } else if (
-              questionType === "TrueFalse" &&
-              questionsOfType[0].type === "TYPE 2"
-            ) {
-              doc
-                .rect(doc.x + 175, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
-                .strokeColor("black");
-            } else if (
-              questionType === "MultipleChoice" &&
-              questionsOfType[0].type === "TYPE 3"
-            ) {
-              doc
-                .rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
-                .strokeColor("black");
-            } else if (
-              questionType === "Identification" &&
-              questionsOfType[0].type === "TYPE 3"
-            ) {
-              doc
-                .rect(doc.x + 320, doc.y - 19.5, 140, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
-                .strokeColor("black");
-            } else if (
-              questionType === "TrueFalse" &&
-              questionsOfType[0].type === "TYPE 3"
-            ) {
-              doc
-                .rect(doc.x + 320, doc.y - 19.5, boxSize, boxSize)
-                .lineWidth(boxLineWeight)
-                .stroke("#adb8af")
+                .rect(70 + 275, 40, columnWidth + 30, 700)
+                .stroke()
                 .strokeColor("black");
             }
 
-            doc.fill("black");
-            doc.strokeColor("black");
-            doc.moveDown(1.3);
-            doc.lineWidth(5);
-            questionNumber++;
-          });
+            //nice
+            doc.text(`${displayText}`, 50, 140, {
+              width: columnWidth + 556,
+              align: alignment,
+            });
+            let questionNumber = 1;
+
+            //<10
+            doc.moveDown(3);
+            questionsOfType.forEach(() => {
+              if (questionNumber <= 9) {
+                if (
+                  questionType === "Identification" &&
+                  questionsOfType[0].type === "TYPE 2"
+                ) {
+                  //Goods
+                  doc.text(`${questionNumber}.  `, {
+                    bold: true,
+                    fontSize: 12,
+                    width: columnWidth + 118,
+                    align: "right",
+                  });
+                } else if (
+                  questionType === "TrueFalse" &&
+                  questionsOfType[0].type === "TYPE 2"
+                ) {
+                  doc.text(`${questionNumber}.   `, {
+                    bold: true,
+                    fontSize: 12,
+                    width: columnWidth + 118,
+                    align: "right",
+                  });
+                } else {
+                  doc.text(`${questionNumber}.   `, {
+                    bold: true,
+                    fontSize: 12,
+                    width: columnWidth + 200,
+                    align: "left",
+                  });
+                }
+              }
+              if (questionNumber >= 10) {
+                if (
+                  questionType === "Identification" &&
+                  questionsOfType[0].type === "TYPE 2"
+                ) {
+                  doc.text(`${questionNumber}.  `, {
+                    bold: true,
+                    fontSize: 12,
+                    width: columnWidth + 118,
+                    align: "right",
+                  });
+                } else if (
+                  questionType === "TrueFalse" &&
+                  questionsOfType[0].type === "TYPE 2"
+                ) {
+                  doc.text(`${questionNumber}.   `, {
+                    bold: true,
+                    fontSize: 12,
+                    width: columnWidth + 118,
+                    align: "right",
+                  });
+                } else {
+                  doc.text(`${questionNumber}.   `, {
+                    bold: true,
+                    fontSize: 12,
+                    width: columnWidth + 325,
+                    align: alignment,
+                  });
+                }
+              }
+
+              // BOXES
+              if (
+                //Goods
+                questionType === "MultipleChoice" &&
+                questionsOfType[0].type === "TYPE 1"
+              ) {
+                doc
+                  .rect(doc.x + 45 + boxSpacing, doc.y - 16, boxSize, boxSize)
+                  .lineWidth(boxLineWeight)
+                  .stroke("#adb8af")
+                  .strokeColor("black");
+              } else if (
+                questionType === "Identification" &&
+                questionsOfType[0].type === "TYPE 1"
+              ) {
+                doc
+                  .rect(doc.x + 45, doc.y - 16, 140, boxSize)
+                  .lineWidth(boxLineWeight)
+                  .stroke("#adb8af")
+                  .strokeColor("black");
+              } else if (
+                questionType === "TrueFalse" &&
+                questionsOfType[0].type === "TYPE 1"
+              ) {
+                doc
+                  .rect(doc.x + 45 + boxSpacing, doc.y - 16, boxSize, boxSize)
+                  .lineWidth(boxLineWeight)
+                  .stroke("#adb8af")
+                  .strokeColor("black");
+              } else if (
+                questionType === "MultipleChoice" &&
+                questionsOfType[0].type === "TYPE 2"
+              ) {
+                doc
+                  .rect(doc.x + 365, doc.y - 16, boxSize, boxSize)
+                  .lineWidth(boxLineWeight)
+                  .stroke("#adb8af")
+                  .strokeColor("black");
+              } else if (
+                questionType === "Identification" &&
+                questionsOfType[0].type === "TYPE 2"
+              ) {
+                doc
+                  .rect(doc.x + 365, doc.y - 16, 140, boxSize)
+                  .lineWidth(boxLineWeight)
+                  .stroke("#adb8af")
+                  .strokeColor("black");
+              } else if (
+                //Goods
+                questionType === "TrueFalse" &&
+                questionsOfType[0].type === "TYPE 2"
+              ) {
+                doc
+                  .rect(doc.x + 365, doc.y - 16, boxSize, boxSize)
+                  .lineWidth(boxLineWeight)
+                  .stroke("#adb8af")
+                  .strokeColor("black");
+              }
+
+              doc.fill("black");
+              doc.strokeColor("black");
+              doc.moveDown(1.3);
+              doc.lineWidth(5);
+              questionNumber++;
+            });
+          }
         }
-      }
-      doc.lineWidth(5);
+        doc.lineWidth(5);
 
-      doc.moveDown(4);
+        doc.moveDown(4);
 
-      // Add a page break for the next student (except for the last one)
-      if (student !== studentData[studentData.length - 1]) {
-        doc.addPage();
+        // Add a page break for the next student (except for the last one)
+        if (student !== studentData[studentData.length - 1]) {
+          doc.addPage();
+        }
       }
     }
-  }
 
     // Pipe the PDF to the response stream
     res.setHeader("Content-Type", "application/pdf");
@@ -2083,13 +2111,10 @@ WHERE TRIM(UID_test) = ?;
   }
 });
 
-
-
-app.get('/getquestionstypeandnumberandanswer/:uid', async (req, res) => {
-  const {  uid } = req.params;
+app.get("/getquestionstypeandnumberandanswer", async (req, res) => {
+  const { uid } = req.query;
 
   console.log("uid:", uid);
-  
 
   try {
     // Construct the SQL query to retrieve the questions data
@@ -2100,25 +2125,28 @@ app.get('/getquestionstypeandnumberandanswer/:uid', async (req, res) => {
     `;
 
     // Execute the query with the provided parameters
-    const [testdata] = await connection.query(query, [ uid]);
+    const [testdata] = await connection.query(query, [uid]);
 
     if (testdata.length >= 1) {
       console.log("Found test data for UID:", uid);
 
       // Extract questions data from the response
-      const questionsData = testdata[0].questions;
+      const questionsData = JSON.parse(testdata[0].questions);
 
       // Extract questionNumber, questionType, and answer from questionsData
-      const questionNumbers = questionsData.map((question) => question.questionNumber);
-      const questionTypes = questionsData.map((question) => question.questionType);
+      const questionNumbers = questionsData.map(
+        (question) => question.questionNumber
+      );
+      const questionTypes = questionsData.map(
+        (question) => question.questionType
+      );
       const answers = questionsData.map((question) => question.answer);
       const score = questionsData.map((question) => question.score);
       const totalscore = questionsData.map((question) => question.TotalScore);
 
-      const totalScoreValue = totalscore.filter(score => typeof score === 'number').pop();
-
-
-      
+      const totalScoreValue = totalscore
+        .filter((score) => typeof score === "number")
+        .pop();
 
       // Construct the response object with questionNumber, questionType, and answers
       const responseData = {
@@ -2126,23 +2154,21 @@ app.get('/getquestionstypeandnumberandanswer/:uid', async (req, res) => {
         questionTypes,
         answers,
         score,
-        totalScoreValue
+        totalScoreValue,
       };
 
-      console.log("totalscore: ", responseData)
       res.status(200).json(responseData);
     } else {
       console.log("Test data not found for UID:", uid);
-      res.status(404).json({ error: 'test data not found' });
+      res.status(404).json({ error: "test data not found" });
     }
   } catch (error) {
-    console.error('Error retrieving test data:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error retrieving test data:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-
-app.post('/results', async (req, res) => {
+app.post("/results", async (req, res) => {
   try {
     const { TUPCID, UID, questionType, answers } = req.body;
 
@@ -2156,21 +2182,25 @@ app.post('/results', async (req, res) => {
     const values = [
       TUPCID || null,
       UID || null,
-      JSON.stringify(questionType), 
-      JSON.stringify(answers),      
+      JSON.stringify(questionType),
+      JSON.stringify(answers),
     ];
 
     await connection.query(query, values);
 
     // Respond with a success message
-    res.status(200).json({ message: 'Data added to the database successfully' });
+    res
+      .status(200)
+      .json({ message: "Data added to the database successfully" });
   } catch (error) {
-    console.error('Error adding data to the database:', error);
-    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+    console.error("Error adding data to the database:", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 });
 
-app.get('/resultsexist/:UID/:TUPCID', async (req, res) => {
+app.get("/resultsexist/:UID/:TUPCID", async (req, res) => {
   try {
     const { UID, TUPCID } = req.params;
 
@@ -2192,26 +2222,25 @@ app.get('/resultsexist/:UID/:TUPCID', async (req, res) => {
       res.status(200).json({ count: 0 });
     }
   } catch (error) {
-    console.error('Error checking data in the database:', error);
-    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+    console.error("Error checking data in the database:", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 });
 
-
-
-
-app.put('/updateresults/:TUPCID', async (req, res) => {
+app.put("/updateresults/:TUPCID", async (req, res) => {
   try {
-    const {TUPCID} = req.params;
-    const {  questionType, answers } = req.body;
-    console.log("ID:" , TUPCID)
+    const { TUPCID } = req.params;
+    const { questionType, answers } = req.body;
+    console.log("ID:", TUPCID);
     // Update the record in the database based on TUPCID
     const updateQuery = `
       UPDATE results
       SET questionType = ?, answers = ?, results_takendate = CURRENT_TIMESTAMP
       WHERE TUPCID = ?
     `;
-    console.log("tupcid check:", TUPCID)
+    console.log("tupcid check:", TUPCID);
     const values = [
       JSON.stringify(questionType) || null,
       JSON.stringify(answers) || null,
@@ -2221,69 +2250,63 @@ app.put('/updateresults/:TUPCID', async (req, res) => {
     await connection.query(updateQuery, values);
 
     // Respond with a success message
-    res.status(200).json({ message: 'Data updated in the database successfully' });
+    res
+      .status(200)
+      .json({ message: "Data updated in the database successfully" });
   } catch (error) {
-    console.error('Error updating data in the database:', error);
-    res.status(500).json({ error: 'Internal Server Error', message: error.message });
+    console.error("Error updating data in the database:", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
   }
 });
 
-app.get('/getstudentanswers/:studentid/:uid', async (req, res) => {
-  const { studentid, uid } = req.params;
-
+app.get("/getstudentanswers", async (req, res) => {
+  const { TUPCID, UID } = req.query;
+  console.log("tupcid: ", TUPCID);
+  console.log("uid: ", UID);
   try {
     // Construct the SQL query to retrieve the student answers data with the latest timestamp
     const query = `
-      SELECT answers
-      FROM results
+      SELECT TESTTYPE, results
+      FROM student_results
       WHERE TUPCID = ? AND UID = ?
-      ORDER BY results_takendate DESC
-      LIMIT 1; -- Limit to retrieve the latest record
     `;
 
     // Execute the query with the provided parameters
-    const [studentAnswerData] = await connection.query(query, [studentid, uid]);
+    const [studentAnswerData] = await connection.query(query, [TUPCID, UID]);
 
-    if (studentAnswerData.length >= 1) {
-      console.log("Found student answer data for UID:", uid);
-      console.log("Found student answer data for TUPCID:", studentid);
-
-      // Extract student answers data from the response
-      const studentAnswers = studentAnswerData[0].answers; 
-
-      const questionNumbers = studentAnswers.map((answer) => answer.questionNumber);
-      const questionTypes = studentAnswers.map((answer) => answer.questionType);
-      const answers = studentAnswers.map((answer) => answer.answer);
-
-      // Construct the response object with student answers
-      const responseData = {  
-        questionNumbers, questionTypes, answers
+    if (studentAnswerData && studentAnswerData.length > 0) {
+      const responseData = {
+        TESTTYPE: studentAnswerData[0].TESTTYPE, // Include TESTTYPE field in the response
+        studentAnswers: JSON.parse(studentAnswerData[0].results), // Parse results field as JSON
       };
-      console.log("check response:", responseData)
+      console.log(responseData);
       res.status(200).json(responseData);
     } else {
-      console.log("Student answer data not found for UID:", uid);
-      res.status(404).json({ error: 'student answer data not found' });
+      console.log(
+        "Student answer data not found for TUPCID:",
+        TUPCID,
+        "and UID:",
+        UID
+      );
+      res.status(404).json({ error: "Student answer data not found" });
     }
   } catch (error) {
-    console.error('Error retrieving student answer data:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error retrieving student answer data:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 
 app.get("/Studentname/:TUPCID", async (req, res) => {
   const { TUPCID } = req.params;
   try {
-    const query = "SELECT FIRSTNAME, MIDDLENAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
+    const query =
+      "SELECT FIRSTNAME, MIDDLENAME, SURNAME FROM student_accounts WHERE TUPCID = ?";
     const [studentData] = await connection.query(query, [TUPCID]);
 
     if (studentData.length > 0) {
-      const {
-        FIRSTNAME,
-        SURNAME,
-        MIDDLENAME
-      } = studentData[0];
+      const { FIRSTNAME, SURNAME, MIDDLENAME } = studentData[0];
 
       return res.status(202).send({
         TUPCID,
@@ -2299,9 +2322,7 @@ app.get("/Studentname/:TUPCID", async (req, res) => {
   }
 });
 
-
-
-app.put('/updatestudentanswers/:studentid/:uid', async (req, res) => {
+app.put("/updatestudentanswers/:studentid/:uid", async (req, res) => {
   const { studentid, uid } = req.params;
 
   try {
@@ -2322,79 +2343,49 @@ app.put('/updatestudentanswers/:studentid/:uid', async (req, res) => {
     const [testpaper] = await connection.query(testpaperQuery, [uid]);
 
     if (result.length >= 1 && testpaper.length >= 1) {
-      const studentAnswers = result[0].answers; 
-      const testpaperQuestions = testpaper[0].questions;
+      const studentAnswers = JSON.parse(result[0].answers);
+      const testpaperQuestions = JSON.parse(testpaper[0].questions);
 
+      const updatedAnswers = studentAnswers.map((answer) => {
+        const matchingQuestion = testpaperQuestions.find(
+          (question) =>
+            question.questionNumber === answer.questionNumber &&
+            question.type === answer.type
+        );
 
-
-      const updatedAnswers = studentAnswers.map(answer => {
-        const matchingQuestion = testpaperQuestions.find(question => (question.questionNumber === answer.questionNumber) && (question.type === answer.type));
-
-    
-        console.log("typeANSWER", answer.type)
-        console.log("type", matchingQuestion.type)
-
+        console.log("typeANSWER", answer.type);
+        console.log("type", matchingQuestion.type);
 
         if (matchingQuestion && matchingQuestion.answer === answer.answer) {
-          answer.score = matchingQuestion.score; 
+          answer.score = matchingQuestion.score;
         } else {
-          answer.score = 0; 
+          answer.score = 0;
         }
-      
+
         return answer;
       });
-
-      
 
       const updateQuery = `
         UPDATE results
         SET answers = ?
         WHERE TUPCID = ? AND UID = ?;
       `;
-      await connection.query(updateQuery, [JSON.stringify(updatedAnswers), studentid, uid]);
+      await connection.query(updateQuery, [
+        JSON.stringify(updatedAnswers),
+        studentid,
+        uid,
+      ]);
 
       res.status(200).json({ updatedAnswers });
     } else {
-      res.status(404).json({ error: 'Student answer data or testpaper not found' });
+      res
+        .status(404)
+        .json({ error: "Student answer data or testpaper not found" });
     }
   } catch (error) {
-    console.error('Error updating student answers:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error updating student answers:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-});
-
-
-
-
-app.post('/sendanswertoresult', async (req, res) => {
-  const { TUPCID, UID, results, correct, wrong, totalscore2, maxscore } = req.body;
-
-  try {
-    // Construct the SQL query to retrieve the student answers data
-    const query = `
-    INSERT INTO student_results
-    (TUPCID, UID, results, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out) 
-      VALUES (?, ?, ?, ?,?,?,?, NOW())
-  `;
-
-  const values = [
-    TUPCID || null,
-    UID || null,
-    JSON.stringify(results), 
-    correct,
-    wrong,
-    totalscore2,      
-    maxscore
-  ];
-
-  await connection.query(query, values);
-
-  // Respond with a success message
-  res.status(200).json({ message: 'Data added to the database successfully' });
-} catch (error) {
-  console.error('Error adding data to the database:', error);
-  res.status(500).json({ error: 'Internal Server Error', message: error.message });
-}
 });
 
 app.get("/Studentscores/:uid", async (req, res) => {
@@ -2412,23 +2403,78 @@ app.get("/Studentscores/:uid", async (req, res) => {
         WHERE TUPCID = sr.TUPCID
       )
     `;
+    const query2 = `
+      SELECT questions FROM testpapers WHERE UID_test = ?
+    `;
 
+    const [totalquestionscore] = await connection.query(query2, [uid]);
     const [studentScores] = await connection.query(query, [uid]);
 
     if (studentScores.length > 0) {
-      const studentlist = studentScores.map(result => ({
+      const studentlist = studentScores.map((result) => ({
         TUPCID: result.TUPCID,
         FIRSTNAME: result.FIRSTNAME,
         SURNAME: result.SURNAME,
         TOTALSCORE: result.TOTALSCORE,
         CORRECT: result.CORRECT,
         WRONG: result.WRONG,
-        MAXSCORE: result.MAXSCORE
+        MAXSCORE: result.MAXSCORE,
       }));
 
       console.log("studentlist:", studentlist);
 
-      return res.status(200).send({ studentlist });
+      if (totalquestionscore.length > 0) {
+        // Process retrieved questions and their scores, excluding null or undefined values
+        const questionData = totalquestionscore.reduce((acc, { questions }) => {
+          const parsedQuestions = JSON.parse(questions); // Assuming 'questions' column contains JSON data
+
+          if (parsedQuestions && parsedQuestions.length > 0) {
+            const validQuestions = parsedQuestions
+              .filter(
+                ({ questionNumber, score }) =>
+                  questionNumber !== undefined && score !== undefined
+              )
+              .map(({ questionNumber, score }) => ({ questionNumber, score }));
+
+            acc.push(...validQuestions);
+          }
+
+          return acc;
+        }, []);
+
+        console.log("questionData:", questionData);
+
+        const questionNumberCount = questionData.reduce(
+          (acc, { questionNumber }) => {
+            acc[questionNumber] = (acc[questionNumber] || 0) + 1;
+            return acc;
+          },
+          {}
+        );
+
+        console.log("questionNumberCount:", questionNumberCount);
+
+        const totalQuestions = questionData.length;
+        console.log("Total Questions:", totalQuestions);
+
+        // Extract unique scores
+        const uniqueScores = [
+          ...new Set(questionData.map(({ score }) => score)),
+        ];
+        console.log("uniqueScores:", uniqueScores);
+
+        return res
+          .status(200)
+          .send({
+            studentlist,
+            questionData,
+            questionNumberCount,
+            totalQuestions,
+            uniqueScores,
+          });
+      } else {
+        return res.status(404).send({ message: "Questions not found for UID" });
+      }
     } else {
       return res.status(404).send({ message: "Student scores not found" });
     }
@@ -2438,18 +2484,14 @@ app.get("/Studentscores/:uid", async (req, res) => {
   }
 });
 
-
-
-app.get("/Studentname2/:studentid", async (req, res) => {
-  const { studentid } = req.params;
+app.get("/Studentname2", async (req, res) => {
+  const { studentid } = req.query;
   try {
     const query = "SELECT TUPCID FROM student_accounts WHERE uid = ?";
     const [studentData] = await connection.query(query, [studentid]);
 
     if (studentData.length > 0) {
-      const {
-        TUPCID
-      } = studentData[0];
+      const { TUPCID } = studentData[0];
 
       return res.status(202).send({
         TUPCID,
@@ -2462,14 +2504,13 @@ app.get("/Studentname2/:studentid", async (req, res) => {
   }
 });
 
-
-app.get("/myresult/:TUPCID/:uid", async (req, res) => {
-  const { TUPCID, uid } = req.params;
+app.get("/myresult", async (req, res) => {
+  const { TUPCID, uid } = req.query;
 
   try {
     const query =
       "SELECT results, CORRECT, WRONG, TOTALSCORE, MAXSCORE FROM student_results WHERE UID = ? AND TUPCID = ?";
-    const [studentScores] = await connection.query(query, [uid , TUPCID]);
+    const [studentScores] = await connection.query(query, [uid, TUPCID]);
 
     if (studentScores.length > 0) {
       const resultlist = [];
@@ -2494,10 +2535,7 @@ app.get("/myresult/:TUPCID/:uid", async (req, res) => {
   }
 });
 
-    
-
-
-app.get('/printstudentrecord/:uid', async (req, res) => {
+app.get("/printstudentrecord/:uid", async (req, res) => {
   try {
     const { uid } = req.params;
 
@@ -2515,7 +2553,7 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
       JOIN student_accounts sa ON sr.TUPCID = sa.TUPCID
       WHERE sr.UID = ?
     `;
-    
+
     const [studentScores] = await connection.query(query, [uid, uid]);
 
     if (studentScores.length > 0) {
@@ -2523,7 +2561,16 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
       let idCounter = 1; // Initialize the counter for id
 
       for (const result of studentScores) {
-        const { TUPCID, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out, FIRSTNAME, SURNAME } = result;
+        const {
+          TUPCID,
+          CORRECT,
+          WRONG,
+          TOTALSCORE,
+          MAXSCORE,
+          results_out,
+          FIRSTNAME,
+          SURNAME,
+        } = result;
 
         studentlist.push({
           id: idCounter++, // Increment the counter for each record
@@ -2534,24 +2581,24 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
           CORRECT,
           WRONG,
           MAXSCORE,
-          results_out
+          results_out,
         });
       }
 
       // Generate Excel content using studentlist data
-      let xlsx = officegen('xlsx');
+      let xlsx = officegen("xlsx");
       let sheet = xlsx.makeNewSheet();
-      sheet.name = 'Student Records';
+      sheet.name = "Student Records";
 
-      sheet.setCell('A1', 'ID');
-      sheet.setCell('B1', 'TUPCID');
-      sheet.setCell('C1', 'FIRSTNAME');
-      sheet.setCell('D1', 'SURNAME');
-      sheet.setCell('E1', 'TOTALSCORE');
-      sheet.setCell('F1', 'Correct');
-      sheet.setCell('G1', 'Wrong');
-      sheet.setCell('H1', 'MAXSCORE');
-      sheet.setCell('I1', 'RESULTS TAKEN');
+      sheet.setCell("A1", "ID");
+      sheet.setCell("B1", "TUPCID");
+      sheet.setCell("C1", "FIRSTNAME");
+      sheet.setCell("D1", "SURNAME");
+      sheet.setCell("E1", "TOTALSCORE");
+      sheet.setCell("F1", "Correct");
+      sheet.setCell("G1", "Wrong");
+      sheet.setCell("H1", "MAXSCORE");
+      sheet.setCell("I1", "RESULTS TAKEN");
 
       // Add data to the sheet based on fetched records:
       studentlist.forEach((record, index) => {
@@ -2566,60 +2613,69 @@ app.get('/printstudentrecord/:uid', async (req, res) => {
         sheet.setCell(`H${rowIndex}`, record.MAXSCORE);
         const date = new Date(record.results_out);
 
-        const formattedDate = date.toLocaleString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric'
+        const formattedDate = date.toLocaleString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
         });
 
         sheet.setCell(`I${rowIndex}`, formattedDate);
       });
 
       // Set headers for response
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename="example.xlsx"');
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="example.xlsx"'
+      );
 
       // Pipe the generated Excel file directly to the response stream
       xlsx.generate(res);
 
-      console.log('Excel file generation initiated for UID:', uid);
+      console.log("Excel file generation initiated for UID:", uid);
     } else {
       return res.status(404).send({ message: "Student scores not found" });
     }
   } catch (error) {
-    console.error('Error while generating Excel file:', error);
-    res.status(500).send('Internal Server Error');
+    console.error("Error while generating Excel file:", error);
+    res.status(500).send("Internal Server Error");
   }
 });
 
-
-app.put('/updateTotalScore/:TUPCID', async (req, res) => {
+app.put("/updateTotalScore/:TUPCID", async (req, res) => {
   try {
     const { TUPCID } = req.params;
+    const { UID } = req.query;
     const { CORRECT, WRONG, TOTALSCORE } = req.body; // Get the updated values for correct and wrong answers
 
-    console.log("Received TUPCID:", TUPCID);
-    console.log("Received correct:", CORRECT);
-    console.log("Received wrong:", WRONG);
-    console.log("Received TOTAL:", TOTALSCORE);
-
     // Update CORRECT and WRONG in the database for the given TUPCID
-    const updateScoreQuery = 'UPDATE student_results SET CORRECT = ?, WRONG = ?, TOTALSCORE = ? WHERE TUPCID = ?';
-    await connection.query(updateScoreQuery, [CORRECT, WRONG, TOTALSCORE, TUPCID]);
+    const updateScoreQuery =
+      "UPDATE student_results SET CORRECT = ?, WRONG = ?, TOTALSCORE = ? WHERE TUPCID = ? AND UID = ?";
+    await connection.query(updateScoreQuery, [
+      CORRECT,
+      WRONG,
+      TOTALSCORE,
+      TUPCID,
+      UID,
+    ]);
 
     // Send success response
-    res.status(200).send('CORRECT and WRONG updated successfully');
+    res.status(200).send("CORRECT and WRONG updated successfully");
   } catch (error) {
-    console.error('Error updating CORRECT and WRONG:', error);
-    res.status(500).send('Error updating CORRECT and WRONG');
+    console.error("Error updating CORRECT and WRONG:", error);
+    res.status(500).send("Error updating CORRECT and WRONG");
   }
 });
 
-
 //auditlogstart here
-app.get('/generateloginaudit', async (req, res) => {
+app.get("/generateloginaudit", async (req, res) => {
   try {
-    const [loginRecords] = await connection.query('SELECT TUPCID, PROFILE, STATUS, TIMESTAMP FROM overalllogin_log');
+    const [loginRecords] = await connection.query(
+      "SELECT TUPCID, PROFILE, STATUS, TIMESTAMP FROM overalllogin_log"
+    );
 
     // Create a map to store login and logout times based on TUPCID
     const loginLogoutMap = {};
@@ -2629,9 +2685,9 @@ app.get('/generateloginaudit', async (req, res) => {
         loginLogoutMap[TUPCID] = { profile: PROFILE };
       }
 
-      if (STATUS === 'ONLINE') {
+      if (STATUS === "ONLINE") {
         loginLogoutMap[TUPCID].loginTime = TIMESTAMP;
-      } else if (STATUS === 'OFFLINE') {
+      } else if (STATUS === "OFFLINE") {
         loginLogoutMap[TUPCID].logoutTime = TIMESTAMP;
       }
     });
@@ -2640,29 +2696,37 @@ app.get('/generateloginaudit', async (req, res) => {
     const adminList = Object.keys(loginLogoutMap).map((TUPCID, index) => {
       const { loginTime, logoutTime, profile } = loginLogoutMap[TUPCID];
 
-      const formattedLoginDate = loginTime ? new Date(loginTime).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      }) : null;
-      const formattedLoginTime = loginTime ? new Date(loginTime).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        second: 'numeric',
-        hour12: true,
-      }) : null;
+      const formattedLoginDate = loginTime
+        ? new Date(loginTime).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+        : null;
+      const formattedLoginTime = loginTime
+        ? new Date(loginTime).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
+            hour12: true,
+          })
+        : null;
 
-      const formattedLogoutDate = logoutTime ? new Date(logoutTime).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      }) : null;
-      const formattedLogoutTime = logoutTime ? new Date(logoutTime).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        second: 'numeric',
-        hour12: true,
-      }) : null;
+      const formattedLogoutDate = logoutTime
+        ? new Date(logoutTime).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+        : null;
+      const formattedLogoutTime = logoutTime
+        ? new Date(logoutTime).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
+            hour12: true,
+          })
+        : null;
 
       return {
         id: index + 1,
@@ -2676,19 +2740,19 @@ app.get('/generateloginaudit', async (req, res) => {
     });
 
     // Create a new Excel document
-    const officegen = require('officegen');
-    let xlsx = officegen('xlsx');
+    const officegen = require("officegen");
+    let xlsx = officegen("xlsx");
     let sheet = xlsx.makeNewSheet();
-    sheet.name = 'AdminAuditLog';
+    sheet.name = "AdminAuditLog";
 
     // Add headers to the sheet
     sheet.data[0] = [
-      'No.',
-      'ID ACCOUNT',
-      'PROFILE',
-      'LOGIN TIME',
-      'LOGOUT TIME',
-      'DATE',
+      "No.",
+      "ID ACCOUNT",
+      "PROFILE",
+      "LOGIN TIME",
+      "LOGOUT TIME",
+      "DATE",
     ];
 
     // Add data to the sheet
@@ -2697,45 +2761,47 @@ app.get('/generateloginaudit', async (req, res) => {
         admin.id,
         admin.TUPCID,
         admin.PROFILE,
-        admin.loginTime || 'N/A',
-        admin.logoutTime || 'N/A',
-        admin.loginDate || 'N/A',
+        admin.loginTime || "N/A",
+        admin.logoutTime || "N/A",
+        admin.loginDate || "N/A",
       ];
     });
 
     // Set headers for response
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="AdminAuditLog.xlsx"');
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="AdminAuditLog.xlsx"'
+    );
 
     // Generate the Excel file and send it in the response
     xlsx.generate(res);
 
-    console.log('Excel file generation initiated for Admin Audit Log');
+    console.log("Excel file generation initiated for Admin Audit Log");
   } catch (error) {
-    console.error('Error generating Excel file:', error);
-    res.status(500).send('Error generating Excel file');
+    console.error("Error generating Excel file:", error);
+    res.status(500).send("Error generating Excel file");
   }
 });
 
-
-
-
-
-
-
-app.get('/generatefacultylog', async (req, res) => {
+app.get("/generatefacultylog", async (req, res) => {
   try {
     // Fetch data from the 'faculty_accounts' table
-    const [rows] = await connection.query('SELECT TUPCID, SURNAME, FIRSTNAME, MIDDLENAME, GSFEACC, SUBJECTDEPT, REGISTEREDDATE FROM faculty_accounts');
+    const [rows] = await connection.query(
+      "SELECT TUPCID, SURNAME, FIRSTNAME, MIDDLENAME, GSFEACC, SUBJECTDEPT, REGISTEREDDATE FROM faculty_accounts"
+    );
 
     const facultyList = [];
 
     rows.forEach((faculty, index) => {
       const date = new Date(faculty.REGISTEREDDATE);
-      const formattedDate = date.toLocaleString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
+      const formattedDate = date.toLocaleString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
 
       facultyList.push({
@@ -2751,20 +2817,20 @@ app.get('/generatefacultylog', async (req, res) => {
     });
 
     // Create a new Excel document
-    let xlsx = officegen('xlsx');
+    let xlsx = officegen("xlsx");
     let sheet = xlsx.makeNewSheet();
-    sheet.name = 'FacultyAuditLog';
+    sheet.name = "FacultyAuditLog";
 
     // Add headers to the sheet
     sheet.data[0] = [
-      'No.',
-      'ID ACCOUNT',
-      'FIRSTNAME',
-      'MIDDLENAME',
-      'SURNAME',
-      'GSFE ACCOUNT',
-      'SUBJECT DEPARTMENT',
-      'REGISTERED DATE',
+      "No.",
+      "ID ACCOUNT",
+      "FIRSTNAME",
+      "MIDDLENAME",
+      "SURNAME",
+      "GSFE ACCOUNT",
+      "SUBJECT DEPARTMENT",
+      "REGISTERED DATE",
     ];
 
     // Add data to the sheet
@@ -2782,44 +2848,51 @@ app.get('/generatefacultylog', async (req, res) => {
     });
 
     // Set headers for response
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="FacultyAuditLog.xlsx"');
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="FacultyAuditLog.xlsx"'
+    );
 
     // Generate the Excel file and send it in the response
     xlsx.generate(res);
 
-    console.log('Excel file generation initiated for Faculty Audit Log');
+    console.log("Excel file generation initiated for Faculty Audit Log");
   } catch (error) {
-    console.error('Error generating Excel file:', error);
-    res.status(500).send('Error generating Excel file');
+    console.error("Error generating Excel file:", error);
+    res.status(500).send("Error generating Excel file");
   }
 });
 
-
-app.get('/generatetestlistlog', async (req, res) => {
+app.get("/generatetestlistlog", async (req, res) => {
   try {
     // Fetch data from the 'faculty_testlist' table
-    const [rows] = await connection.query('SELECT Professor_ID, Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, TestName, Subject, Section_Name, Semester, Uid_Section, Uid_Test, date_created FROM faculty_testlist');
+    const [rows] = await connection.query(
+      "SELECT Professor_ID, Professor_FirstName, Professor_MiddleName, Professor_LastName, Professor_SubjectDept, TestName, Subject, Section_Name, Semester, Uid_Section, Uid_Test, date_created FROM faculty_testlist"
+    );
 
     // Create an instance of officegen Excel
-    let xlsx = officegen('xlsx');
+    let xlsx = officegen("xlsx");
     let sheet = xlsx.makeNewSheet();
-    sheet.name = 'Test List Records';
+    sheet.name = "Test List Records";
 
     // Add headers to the sheet
-    sheet.setCell('A1', 'ID');
-    sheet.setCell('B1', 'Professor ID');
-    sheet.setCell('C1', 'First Name');
-    sheet.setCell('D1', 'Middle Name');
-    sheet.setCell('E1', 'Last Name');
-    sheet.setCell('F1', 'Subject Department');
-    sheet.setCell('G1', 'Test Name');
-    sheet.setCell('H1', 'Subject');
-    sheet.setCell('I1', 'Section Name');
-    sheet.setCell('J1', 'Semester');
-    sheet.setCell('K1', 'Uid Section');
-    sheet.setCell('L1', 'Uid Test');
-    sheet.setCell('M1', 'Date Created');
+    sheet.setCell("A1", "ID");
+    sheet.setCell("B1", "Professor ID");
+    sheet.setCell("C1", "First Name");
+    sheet.setCell("D1", "Middle Name");
+    sheet.setCell("E1", "Last Name");
+    sheet.setCell("F1", "Subject Department");
+    sheet.setCell("G1", "Test Name");
+    sheet.setCell("H1", "Subject");
+    sheet.setCell("I1", "Section Name");
+    sheet.setCell("J1", "Semester");
+    sheet.setCell("K1", "Uid Section");
+    sheet.setCell("L1", "Uid Test");
+    sheet.setCell("M1", "Date Created");
 
     // Add data to the sheet based on fetched records
     rows.forEach((record, index) => {
@@ -2836,43 +2909,50 @@ app.get('/generatetestlistlog', async (req, res) => {
       sheet.setCell(`J${rowIndex}`, record.Semester);
       sheet.setCell(`K${rowIndex}`, record.Uid_Section);
       sheet.setCell(`L${rowIndex}`, record.Uid_Test);
-      
+
       const date = new Date(record.date_created); // Assuming date_created is in 'YYYY-MM-DD HH:MM:SS' format
-      const formattedDate = date.toLocaleString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
+      const formattedDate = date.toLocaleString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
-      
+
       sheet.setCell(`M${rowIndex}`, formattedDate); // Add formatted date to the sheet
     });
 
     // Set response headers for Excel file download
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="TestListRecords.xlsx"');
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="TestListRecords.xlsx"'
+    );
 
     // Pipe the generated Excel file directly to the response stream
     xlsx.generate(res);
 
-    console.log('Excel file generation initiated for Test List Records');
+    console.log("Excel file generation initiated for Test List Records");
   } catch (error) {
-    console.error('Error generating Excel file:', error);
-    res.status(500).send('Error generating Excel file');
+    console.error("Error generating Excel file:", error);
+    res.status(500).send("Error generating Excel file");
   }
 });
 
-
-app.get('/generatestudentlistlog', async (req, res) => {
+app.get("/generatestudentlistlog", async (req, res) => {
   try {
     // Fetch data from the 'student_accounts' table
-    const [rows] = await connection.query('SELECT TUPCID, FIRSTNAME, MIDDLENAME, SURNAME, GSFEACC, COURSE, SECTION, YEAR, STATUS, REGISTEREDDATE FROM student_accounts');
+    const [rows] = await connection.query(
+      "SELECT TUPCID, FIRSTNAME, MIDDLENAME, SURNAME, GSFEACC, COURSE, SECTION, YEAR, STATUS, REGISTEREDDATE FROM student_accounts"
+    );
 
     const studentList = rows.map((student, index) => {
-      const date = new Date(student.REGISTEREDDATE); 
-      const formattedDate = date.toLocaleString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
+      const date = new Date(student.REGISTEREDDATE);
+      const formattedDate = date.toLocaleString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
 
       return {
@@ -2886,20 +2966,32 @@ app.get('/generatestudentlistlog', async (req, res) => {
         SECTION: student.SECTION,
         YEAR: student.YEAR,
         STATUS: student.STATUS,
-        REGISTEREDDATE: formattedDate // Add formatted date to the object
+        REGISTEREDDATE: formattedDate, // Add formatted date to the object
       };
     });
 
     // Create a new instance of officegen
-    const officegen = require('officegen');
-    const xlsx = officegen('xlsx');
+    const officegen = require("officegen");
+    const xlsx = officegen("xlsx");
 
     // Create a new worksheet
     const sheet = xlsx.makeNewSheet();
-    sheet.name = 'StudentListRecords';
+    sheet.name = "StudentListRecords";
 
     // Add headers to the sheet
-    sheet.data.push(['ID', 'TUPCID', 'FIRSTNAME', 'MIDDLENAME', 'SURNAME', 'GSFEACC', 'COURSE', 'SECTION', 'YEAR', 'STATUS', 'REGISTEREDDATE']);
+    sheet.data.push([
+      "ID",
+      "TUPCID",
+      "FIRSTNAME",
+      "MIDDLENAME",
+      "SURNAME",
+      "GSFEACC",
+      "COURSE",
+      "SECTION",
+      "YEAR",
+      "STATUS",
+      "REGISTEREDDATE",
+    ]);
 
     // Add data to the sheet based on fetched records
     studentList.forEach((student) => {
@@ -2914,53 +3006,60 @@ app.get('/generatestudentlistlog', async (req, res) => {
         student.SECTION,
         student.YEAR,
         student.STATUS,
-        student.REGISTEREDDATE
+        student.REGISTEREDDATE,
       ]);
     });
 
     // Set response headers for Excel file download
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="StudentListRecords.xlsx"');
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="StudentListRecords.xlsx"'
+    );
 
     // Pipe the generated Excel file directly to the response stream
     xlsx.generate(res, {
       finalize: (written) => {
-        console.log('Excel file generation initiated for Student List Records');
-      }
+        console.log("Excel file generation initiated for Student List Records");
+      },
     });
   } catch (error) {
-    console.error('Error generating Excel file:', error);
-    res.status(500).send('Error generating Excel file');
+    console.error("Error generating Excel file:", error);
+    res.status(500).send("Error generating Excel file");
   }
 });
 
-
 //PRESET OF QUESTIONS
 
-app.post('/addtopreset', async(req,res) => {
+app.post("/addtopreset", async (req, res) => {
   const { Professor_ID, TESTNAME, UID, data } = req.body;
 
-  
-
-  const questionsToSave = JSON.stringify(data); 
+  const questionsToSave = JSON.stringify(data);
 
   const insertQuery = `
     INSERT INTO preset_questions (Professor_ID, TESTNAME, UID, questions, questions_saved)
     VALUES (?, ?, ?, ?, NOW())
   `;
 
- 
-  connection.query(insertQuery, [Professor_ID, TESTNAME, UID, questionsToSave], (err, result) => {
-    if (err) {
-      console.error('Error inserting data:', err);
-      res.status(500).json({ error: 'Error updating data. Please try again.' });
-      return;
+  connection.query(
+    insertQuery,
+    [Professor_ID, TESTNAME, UID, questionsToSave],
+    (err, result) => {
+      if (err) {
+        console.error("Error inserting data:", err);
+        res
+          .status(500)
+          .json({ error: "Error updating data. Please try again." });
+        return;
+      }
+
+      res.status(200).json({ message: "Questions saved successfully." });
     }
-
-    res.status(200).json({ message: 'Questions saved successfully.' });
-  });
+  );
 });
-
 
 app.put("/updatequestions/:TUPCID/:uid/:testname", async (req, res) => {
   try {
@@ -2994,17 +3093,14 @@ app.get("/Preset", async (req, res) => {
     const query =
       "SELECT TESTNAME, UID, questions, questions_saved FROM preset_questions WHERE Professor_ID = ?";
     const [row] = await connection.query(query, [UidProf]);
-    
+
     return res.status(200).json(row);
   } catch (err) {
     return res.status(500).send({ message: "Internal server error" });
   }
 });
 
-
-
 //for questions
-// For questions
 app.get("/PresetQuestions", async (req, res) => {
   const { TestId } = req.query;
 
@@ -3013,20 +3109,25 @@ app.get("/PresetQuestions", async (req, res) => {
     const [row] = await connection.query(query, [TestId]);
 
     // Extract and filter out only the TotalScore object
-    const allQuestions = row.flatMap(item => item.questions).filter(question => {
-      if (question && 'TotalScore' in question) {
-        return false; // Filter out TotalScore
-      }
+    const allQuestions = row
+      .flatMap((item) => {
+        const parsedQuestions = JSON.parse(item.questions || "[]");
+        return parsedQuestions;
+      })
+      .filter((question) => {
+        if (question && "TotalScore" in question) {
+          return false; // Filter out TotalScore
+        }
 
-       // Filter out options based on the answer
-       if (question && question.options && question.answer) {
-        question.options = question.options
-          .filter(option => option.label === question.answer)
-          .map(option => option.text); // Extracting text values from options
-      }
+        // Filter out options based on the answer
+        if (question && question.options && question.answer) {
+          question.options = question.options
+            .filter((option) => option.label === question.answer)
+            .map((option) => option.text); // Extracting text values from options
+        }
 
-      return true;
-    });
+        return true;
+      });
 
     console.log("alldata:", allQuestions);
     return res.status(200).json(allQuestions);
@@ -3036,119 +3137,127 @@ app.get("/PresetQuestions", async (req, res) => {
   }
 });
 
-
-
 //logout
 
-
-app.post('/studentlogout', async (req, res) => {
+app.post("/studentlogout", async (req, res) => {
   const { TUPCID, PROFILE, STATUS } = req.body;
   const TIMESTAMP = new Date();
 
   try {
-   
-    const query = 'SELECT TUPCID FROM student_accounts WHERE uid = ?';
+    const query = "SELECT TUPCID FROM student_accounts WHERE uid = ?";
     const [studentData] = await connection.query(query, [TUPCID]);
 
     if (studentData.length > 0) {
       const actualTUPCID = studentData[0].TUPCID;
 
-      
-      const checkOfflineStatusQuery = 'SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?';
+      const checkOfflineStatusQuery =
+        "SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?";
       const checkOfflineStatusValues = [actualTUPCID, STATUS];
-      const [existingOfflineRecord] = await connection.query(checkOfflineStatusQuery, checkOfflineStatusValues);
+      const [existingOfflineRecord] = await connection.query(
+        checkOfflineStatusQuery,
+        checkOfflineStatusValues
+      );
 
       if (existingOfflineRecord.length > 0) {
-      
-        const updateLoginLogQuery = 'UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?';
+        const updateLoginLogQuery =
+          "UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?";
         const updateLoginLogValues = [TIMESTAMP, actualTUPCID, STATUS];
         await connection.query(updateLoginLogQuery, updateLoginLogValues);
       } else {
-      
-        const loginLogQuery = 'INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+        const loginLogQuery =
+          "INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)";
         const loginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
         await connection.query(loginLogQuery, loginLogValues);
 
-        const overallLoginLogQuery = 'INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
-        const overallLoginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
+        const overallLoginLogQuery =
+          "INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)";
+        const overallLoginLogValues = [
+          actualTUPCID,
+          PROFILE,
+          STATUS,
+          TIMESTAMP,
+        ];
         await connection.query(overallLoginLogQuery, overallLoginLogValues);
       }
 
-    
-      res.status(200).json({ message: 'Logout successful' });
+      res.status(200).json({ message: "Logout successful" });
     } else {
-    
-      res.status(404).json({ message: 'Invalid TUPCID' });
+      res.status(404).json({ message: "Invalid TUPCID" });
     }
   } catch (error) {
-    console.error('Error during logout:', error);
-    res.status(500).json({ message: 'An error occurred during logout' });
+    console.error("Error during logout:", error);
+    res.status(500).json({ message: "An error occurred during logout" });
   }
 });
 
-
-app.post('/facultylogout', async (req, res) => {
+app.post("/facultylogout", async (req, res) => {
   const { TUPCID, PROFILE, STATUS } = req.body;
   const TIMESTAMP = new Date();
 
   try {
-   
-    const query = 'SELECT TUPCID FROM faculty_accounts WHERE uid = ?';
+    const query = "SELECT TUPCID FROM faculty_accounts WHERE uid = ?";
     const [facultyData] = await connection.query(query, [TUPCID]);
 
     if (facultyData.length > 0) {
       const actualTUPCID = facultyData[0].TUPCID;
 
-      
-      const checkOfflineStatusQuery = 'SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?';
+      const checkOfflineStatusQuery =
+        "SELECT * FROM login_log WHERE TUPCID = ? AND STATUS = ?";
       const checkOfflineStatusValues = [actualTUPCID, STATUS];
-      const [existingOfflineRecord] = await connection.query(checkOfflineStatusQuery, checkOfflineStatusValues);
+      const [existingOfflineRecord] = await connection.query(
+        checkOfflineStatusQuery,
+        checkOfflineStatusValues
+      );
 
       if (existingOfflineRecord.length > 0) {
-      
-        const updateLoginLogQuery = 'UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?';
+        const updateLoginLogQuery =
+          "UPDATE login_log SET TIMESTAMP = ? WHERE TUPCID = ? AND STATUS = ?";
         const updateLoginLogValues = [TIMESTAMP, actualTUPCID, STATUS];
         await connection.query(updateLoginLogQuery, updateLoginLogValues);
       } else {
-      
-        const loginLogQuery = 'INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
+        const loginLogQuery =
+          "INSERT INTO login_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)";
         const loginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
         await connection.query(loginLogQuery, loginLogValues);
 
-        const overallLoginLogQuery = 'INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)';
-        const overallLoginLogValues = [actualTUPCID, PROFILE, STATUS, TIMESTAMP];
+        const overallLoginLogQuery =
+          "INSERT INTO overalllogin_log (TUPCID, PROFILE, STATUS, TIMESTAMP) VALUES (?, ?, ?, ?)";
+        const overallLoginLogValues = [
+          actualTUPCID,
+          PROFILE,
+          STATUS,
+          TIMESTAMP,
+        ];
         await connection.query(overallLoginLogQuery, overallLoginLogValues);
       }
 
-    
-      res.status(200).json({ message: 'Logout successful' });
+      res.status(200).json({ message: "Logout successful" });
     } else {
-    
-      res.status(404).json({ message: 'Invalid TUPCID' });
+      res.status(404).json({ message: "Invalid TUPCID" });
     }
   } catch (error) {
-    console.error('Error during logout:', error);
-    res.status(500).json({ message: 'An error occurred during logout' });
+    console.error("Error during logout:", error);
+    res.status(500).json({ message: "An error occurred during logout" });
   }
 });
 
-
-
 //ADMIN DASHBOARD
 
-
-app.get('/getstudentrecords', async (req, res) => {
+app.get("/getstudentrecords", async (req, res) => {
   try {
-    const query = 'SELECT * FROM student_accounts';
+    const query = "SELECT * FROM student_accounts";
     const [studentRecords] = await connection.query(query);
 
     // Format the REGISTEREDDATE field for each record
     const formattedStudentRecords = studentRecords.map((record) => {
-      const formattedDate = new Date(record.REGISTEREDDATE).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      const formattedDate = new Date(record.REGISTEREDDATE).toLocaleDateString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      );
       return {
         ...record,
         REGISTEREDDATE: formattedDate,
@@ -3157,51 +3266,55 @@ app.get('/getstudentrecords', async (req, res) => {
 
     res.status(200).json(formattedStudentRecords);
   } catch (error) {
-    console.error('Error fetching student records:', error);
-    res.status(500).json({ message: 'An error occurred while fetching student records' });
+    console.error("Error fetching student records:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching student records" });
   }
 });
 
-
-app.get('/getfacultyrecords', async (req, res) => {
+app.get("/getfacultyrecords", async (req, res) => {
   try {
-    const query = 'SELECT * FROM faculty_accounts';
+    const query = "SELECT * FROM faculty_accounts";
     const [facultyRecords] = await connection.query(query);
 
     // Format the REGISTEREDDATE field for each record
     const formattedFacultyRecords = facultyRecords.map((record) => {
-      const formattedDate = new Date(record.REGISTEREDDATE).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      const formattedDate = new Date(record.REGISTEREDDATE).toLocaleDateString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      );
       return {
         ...record,
         REGISTEREDDATE: formattedDate,
       };
     });
 
-
     res.status(200).json(formattedFacultyRecords);
   } catch (error) {
-    console.error('Error fetching faculty records:', error);
-    res.status(500).json({ message: 'An error occurred while fetching faculty records' });
+    console.error("Error fetching faculty records:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching faculty records" });
   }
 });
 
-
-app.get('/getlogin', async (req, res) => {
+app.get("/getlogin", async (req, res) => {
   try {
-    const query = 'SELECT * FROM login_log';
+    const query = "SELECT * FROM login_log";
     const [loginRecords] = await connection.query(query);
 
     // Create a map to store login and logout times based on TUPCID
     const loginLogoutMap = {};
 
     loginRecords.forEach(({ TUPCID, STATUS, TIMESTAMP }) => {
-      if (STATUS === 'ONLINE') {
+      if (STATUS === "ONLINE") {
         loginLogoutMap[TUPCID] = { loginTime: TIMESTAMP };
-      } else if (STATUS === 'OFFLINE' && loginLogoutMap[TUPCID]) {
+      } else if (STATUS === "OFFLINE" && loginLogoutMap[TUPCID]) {
         loginLogoutMap[TUPCID].logoutTime = TIMESTAMP;
       }
     });
@@ -3213,30 +3326,30 @@ app.get('/getlogin', async (req, res) => {
         ? new Date(loginLogoutMap[TUPCID].logoutTime)
         : null;
 
-      const loginDate = loginDateTime.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
+      const loginDate = loginDateTime.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
       });
-      const loginTime = loginDateTime.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: 'numeric',
-        second: 'numeric',
+      const loginTime = loginDateTime.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
         hour12: true,
       });
 
       const logoutDate = logoutDateTime
-        ? logoutDateTime.toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
+        ? logoutDateTime.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
           })
         : null;
       const logoutTime = logoutDateTime
-        ? logoutDateTime.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: 'numeric',
-            second: 'numeric',
+        ? logoutDateTime.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
             hour12: true,
           })
         : null;
@@ -3249,11 +3362,119 @@ app.get('/getlogin', async (req, res) => {
         logoutTime,
       };
     });
-   
+
     res.status(200).json(formattedData);
   } catch (error) {
-    console.error('Error fetching login records:', error);
-    res.status(500).json({ message: 'An error occurred while fetching login records' });
+    console.error("Error fetching login records:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching login records" });
+  }
+});
+
+//sending result to database:
+
+app.post("/sendresult", async (req, res) => {
+  try {
+    const {
+      studentid,
+      uid,
+      testtype2,
+      result,
+      correct,
+      wrong,
+      totalscore,
+      maxscore,
+    } = req.body;
+
+    const query = `INSERT INTO student_results (
+      TUPCID, UID,TESTTYPE, results, CORRECT, WRONG, TOTALSCORE, MAXSCORE, results_out)
+      VALUES (?,?,?,?,?,?,?,?,NOW()
+    )`;
+
+    const values = [
+      studentid,
+      uid,
+      JSON.stringify(testtype2),
+      JSON.stringify(result),
+      correct,
+      wrong,
+      totalscore,
+      maxscore,
+    ];
+    await connection.query(query, values);
+
+    res.status(200).json({ message: "Data added to the test successfully" });
+  } catch (error) {
+    console.error("Error adding data to the test:", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: error.message });
+  }
+});
+
+app.get("/Studentname2", async (req, res) => {
+  const { studentid } = req.query;
+  console.log("studentid: ", studentid);
+
+  try {
+    const query = `SELECT FIRSTNAME, MIDDLENAME, SURNAME FROM student_accounts WHERE TUPCID = ?`;
+    const [studentData] = await connection.query(query, [studentid]);
+    console.log(studentData);
+
+    if (studentData.length > 0) {
+      const { FIRSTNAME, SURNAME, MIDDLENAME } = studentData[0];
+
+      return res.status(202).send({
+        FIRSTNAME,
+        SURNAME,
+        MIDDLENAME,
+      });
+    } else {
+      return res.status(404).send({ message: "Student not found" });
+    }
+  } catch (error) {
+    throw error;
+  }
+});
+
+//For Combo boxes
+//Register - Faculty and Student
+app.get("/Course", async (req, res) => {
+  try {
+    const query = "SELECT Course, Course_Acronym FROM combobox_input";
+    const [row] = await connection.query(query);
+    return res.status(200).send(row);
+  } catch (err) {
+    throw err;
+  }
+});
+app.get("/Section", async (req, res) => {
+  try {
+    const query = "SELECT Section FROM combobox_input";
+    const [row] = await connection.query(query);
+    return res.status(200).send(row);
+  } catch (err) {
+    throw err;
+  }
+});
+app.get("/Year", async (req, res) => {
+  try {
+    const query = "SELECT Year FROM combobox_input";
+    const [row] = await connection.query(query);
+    return res.status(200).send(row);
+  } catch (err) {
+    throw err;
+  }
+});
+app.get("/SubjectDept", async (req, res) => {
+  try {
+    const query =
+      "SELECT SubjectDepartment, SubjectDepartment_Acronym FROM combobox_input";
+    const [row] = await connection.query(query);
+    return res.status(200).send(row);
+  } catch (err) {
+    throw err;
   }
 });
 
