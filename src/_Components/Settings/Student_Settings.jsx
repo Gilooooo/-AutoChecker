@@ -25,7 +25,6 @@ function StudentSettings({ clicked, setClicked }) {
         const response = await axios.get(
           `http://localhost:3001/studinfos?TUPCID=${TUPCID}`
         );
-        console.log(response.data);
         const {
           FIRSTNAME,
           SURNAME,
@@ -88,7 +87,7 @@ function StudentSettings({ clicked, setClicked }) {
       // Exit editing mode
       setIsEditing(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 

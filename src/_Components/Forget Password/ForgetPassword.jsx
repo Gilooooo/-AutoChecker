@@ -9,10 +9,10 @@ import { useRouter } from "next/navigation";
 
 function ForgetPassword() {
   const [message, setMessage] = useState("");
-
+  const [errormessage, setErrorMessage] = useState("");
   const router = useRouter();
   const gsfeRegExp = /@gsfe.tupcavite.edu.ph/;
-  const tupcRegExp = /TUPC-\d{2}-\d{4}$|ID-\d{4}$/;
+  const tupcRegExp = /TUPC-\d{2}-\d{4}$|\d{2}-\d{3,4}$/;
   const schema = yup.object().shape({
     Tupcid: yup
       .string()
@@ -42,9 +42,9 @@ function ForgetPassword() {
       }
     } catch (err) {
       if (err.response && err.response.status === 409) {
-        setMessage(err.response.data.message)
+        setErrorMessage(err.response.data.message)
       } else {
-        throw err;
+        setErrorMessage(err.response.data.message)
       }
     }
   };
@@ -77,7 +77,7 @@ function ForgetPassword() {
           <small className="text-danger text-center">
             {errors.Gsfeacc?.message}
           </small>
-          <small className="text-success text-center">{message}</small>
+          {message || errormessage ? <small className={`${message ? "text-success":"text-danger"} text-center`}>{message || errormessage}</small>:<></>}
           <button className="btn btn-outline-dark col-3">Submit</button>
         </form>
       </section>

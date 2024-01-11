@@ -14,10 +14,20 @@ function UpdatePassword() {
   const Tupcid = params.get("TUPCID");
 
   const schema = yup.object().shape({
-    NewPassword: yup.string().min(6).required("Required!"),
+    NewPassword: yup
+      .string()
+      .min(6, "Password must be at least 6 characters")
+      .matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/,
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      )
+      .required("Required!"),
     ConfirmPassword: yup
       .string()
-      .oneOf([yup.ref("NewPassword"), null], "Password must match")
+      .oneOf(
+        [yup.ref("NewPassword"), null],
+        "Password must match the new password"
+      )
       .required("Required!"),
   });
   const {

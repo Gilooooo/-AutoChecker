@@ -67,9 +67,8 @@ function Aside_Faculty({ clicked, setClicked }) {
       );
 
       if (logoutResponse.status === 200) {
-        console.log("Logout successful");
       } else {
-        console.log("Logout unsuccessful");
+        console.error("Logout unsuccessful");
       }
     } catch (err) {
       console.error("Error during logout:", err);
@@ -92,35 +91,37 @@ function Aside_Faculty({ clicked, setClicked }) {
               onClick={handleclick}
             ></i>
           </div>
-          <div className="d-flex flex-column">
-            <Link
-              href={{ pathname: "/Faculty/Settings" }}
-              className="text-decoration-none link-dark"
-            >
-              {path == "/Faculty/Settings" ? (
-                <i className="bi bi-gear-fill fs-3"></i>
-              ) : (
-                <i className="bi bi-gear fs-3 custom-hover"></i>
-              )}
-            </Link>
-            <Link
-              href={{ pathname: "/Faculty/ReportProblem" }}
-              className="text-decoration-none link-dark"
-            >
-              {path == "/Faculty/ReportProblem" ? (
-                <i className="bi bi-exclamation-triangle-fill fs-3"></i>
-              ) : (
-                <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
-              )}
-            </Link>
-            <Link
-              href={{ pathname: "/Login" }}
-              className="text-decoration-none link-dark"
-              onClick={() => setTUPCID("")}
-            >
-              <i className="bi bi-power fs-3 custom-hover"></i>
-            </Link>
-          </div>
+          {path != "/Faculty/Preset" && (
+            <div className="d-flex flex-column">
+              <Link
+                href={{ pathname: "/Faculty/Settings" }}
+                className="text-decoration-none link-dark"
+              >
+                {path == "/Faculty/Settings" ? (
+                  <i className="bi bi-gear-fill fs-3"></i>
+                ) : (
+                  <i className="bi bi-gear fs-3 custom-hover"></i>
+                )}
+              </Link>
+              <Link
+                href={{ pathname: "/Faculty/ReportProblem" }}
+                className="text-decoration-none link-dark"
+              >
+                {path == "/Faculty/ReportProblem" ? (
+                  <i className="bi bi-exclamation-triangle-fill fs-3"></i>
+                ) : (
+                  <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
+                )}
+              </Link>
+              <Link
+                href={{ pathname: "/Login" }}
+                className="text-decoration-none link-dark"
+                onClick={() => setTUPCID("")}
+              >
+                <i className="bi bi-power fs-3 custom-hover"></i>
+              </Link>
+            </div>
+          )}
         </div>
       </aside>
       <aside

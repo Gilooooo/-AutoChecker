@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -16,7 +16,7 @@ function StudentResult({ clicked, setClicked }) {
   const [numberOfWrong, setNumberOfWrong] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
   const [maxScore, setMaxScore] = useState(0);
-  const [TUPCID, setTUPCID] = useState(""); 
+  const [TUPCID, setTUPCID] = useState("");
   const [recordList, setRecordList] = useState([]);
   const [studentAnswerData, setStudentAnswerData] = useState([]);
   const [testData, setTestData] = useState([]);
@@ -33,13 +33,12 @@ function StudentResult({ clicked, setClicked }) {
     }
   }, [TUPCID, uid]);
 
-
   const fetchStudentname = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3001/Studentname2/${studentid}`
+        `http://localhost:3001/Studentname2?studentid=${studentid}`
       );
-      setTUPCID(response.data.TUPCID); // Set TUPCID from the API response
+      setTUPCID(response.data.TUPCID);
     } catch (err) {
       console.error(err);
     }
@@ -47,13 +46,15 @@ function StudentResult({ clicked, setClicked }) {
 
   const fetchResult = async () => {
     try {
-      const response = await axios.get(`http://localhost:3001/myresult/${TUPCID}/${uid}`);
+      const response = await axios.get(
+        `http://localhost:3001/myresult?TUPCID=${TUPCID}&uid=${uid}`
+      );
 
       if (response.status === 200) {
         const { resultlist } = response.data;
         setRecordList(resultlist);
 
-        console.log("results: ", resultlist)
+        console.log("results: ", resultlist);
         const [result] = resultlist;
         if (result) {
           const { CORRECT, WRONG, TOTALSCORE, MAXSCORE } = result;
@@ -64,6 +65,7 @@ function StudentResult({ clicked, setClicked }) {
           setMaxScore(MAXSCORE || 0);
         }
       } else {
+        x``;
         console.error("Failed to fetch student scores");
       }
     } catch (error) {
@@ -73,25 +75,21 @@ function StudentResult({ clicked, setClicked }) {
 
   const handleclick = () => {
     setClicked(!clicked);
-  }; 
+  };
   const fetchQuestionData = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3001/getquestionstypeandnumberandanswer/${uid}`
+        `http://localhost:3001/getquestionstypeandnumberandanswer?uid=${uid}`
       );
       if (response.status === 200) {
-        const {
-          questionNumbers,
-          questionTypes,
-          answers,
-          score,
-        } = response.data;
+        const { questionNumbers, questionTypes, answers, score } =
+          response.data;
 
         const organizedData = questionTypes.reduce((acc, type, index) => {
           if (type && answers[index]) {
             const questionNumber = questionNumbers[index];
             const answer = answers[index];
-            const questionScore = score[index]; 
+            const questionScore = score[index];
 
             if (!acc[type]) {
               acc[type] = {
@@ -101,20 +99,25 @@ function StudentResult({ clicked, setClicked }) {
               };
             }
 
-            acc[type].questions.push({ questionNumber, answer, score: questionScore });
+            acc[type].questions.push({
+              questionNumber,
+              answer,
+              score: questionScore,
+            });
             acc[type].score += questionScore || 0;
           }
           return acc;
         }, {});
 
-        const organizedDataArray = Object.entries(organizedData).map(([type, data]) => ({
-          type,
-          questions: data.questions,
-          score: data.score,
-        }));
+        const organizedDataArray = Object.entries(organizedData).map(
+          ([type, data]) => ({
+            type,
+            questions: data.questions,
+            score: data.score,
+          })
+        );
 
         setTestData(organizedDataArray);
-        
       } else {
         console.error("Error fetching data");
       }
@@ -123,59 +126,44 @@ function StudentResult({ clicked, setClicked }) {
     }
   };
 
-
   const fetchStudentAnswers = async () => {
     try {
-      let dataAvailable = false;
-
-      while (!dataAvailable) {
-        const response = await axios.get(
-          `http://localhost:3001/getstudentanswers/${TUPCID}/${uid}`
+      console.log("TUPCID: ", TUPCID)
+      const response = await axios.get(
+        `http://localhost:3001/getstudentanswers?TUPCID=${TUPCID}&UID=${uid}`
+      );
+      if (response.status === 200) {
+        const { studentAnswers } = response.data;
+        console.log(studentAnswers)
+        const organizedDataArray2 = JSON.parse(studentAnswers.TESTTYPE).map(
+          (type, typeIndex) => {
+            // Check if results array is available for the current type
+            if (studentAnswers.results && studentAnswers.results[typeIndex]) {
+              return {
+                type,
+                answers: JSON.parse(studentAnswers.results)[typeIndex].map(
+                  (answer, index) => ({
+                    questionNumber: index,
+                    answer,
+                  })
+                ),
+              };
+            }
+            return {
+              type,
+              answers: [], // If no results are available, set answers to an empty array
+            };
+          }
         );
 
-        if (response.status === 200) {
-          const {
-            testType: fetchedTestType,
-            questionNumbers,
-            questionTypes,
-            answers,
-          } = response.data;
-
-          const filteredData = questionTypes.reduce((acc, type, index) => {
-            if (type && answers[index]) {
-              const questionNumber = questionNumbers[index];
-              const answer = answers[index];
-            
-              
-              if (!acc[type]) {
-                acc[type] = [];
-              }
-              acc[type].push({ questionNumber, answer});
-            }
-            return acc;
-          }, {});
-
-          const organizedDataArray2 = Object.entries(filteredData).map(
-            ([type, data]) => ({
-              type,
-              answers: data,
-            })
-          );
-
-          setStudentAnswerData(organizedDataArray2);
-          setTestType(fetchedTestType || "No Test Paper Created Yet");
-          dataAvailable = true;
-        } else {
-          console.error("Error fetching student answers");
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setStudentAnswerData(organizedDataArray2);
+      } else {
+        console.error("Error fetching student answers");
       }
     } catch (error) {
       console.error("Error fetching student answers:", error);
     }
   };
-
 
   useEffect(() => {
     if (TUPCID && uid) {
@@ -183,40 +171,11 @@ function StudentResult({ clicked, setClicked }) {
     }
   }, [TUPCID, uid]);
 
-
-  
-
-
-useEffect(() => {
-  if (uid) {
-    fetchQuestionData();
-  }
-}, [uid]);
-
-const renderAnswerKeyAndStudentAnswers = (type) => {
-  const relevantTestData = testData.find((data) => data.type === type);
-  const relevantStudentAnswerData = studentAnswerData.find(
-    (data) => data.type === type
-  );
-
-  if (relevantTestData && relevantStudentAnswerData) {
-    return (
-      <>
-        <td>
-          {relevantTestData.questions.map((question, index) => (
-            <div key={index}>{`${question.questionNumber}. ${question.answer}`}</div>
-          ))}
-        </td>
-        <td>
-          {relevantStudentAnswerData.answers.map((answer, idx) => (
-            <div key={idx}>{`${answer.questionNumber}. ${answer.answer}`}</div>
-          ))}
-        </td>
-      </>
-    );
-  }
-  return null;
-};
+  useEffect(() => {
+    if (uid) {
+      fetchQuestionData();
+    }
+  }, [uid]);
 
   return (
     <main className="w-100 min-vh-100">
@@ -229,15 +188,19 @@ const renderAnswerKeyAndStudentAnswers = (type) => {
           <Link href={{ pathname: "/Student" }}>
             <i className="bi bi-arrow-left fs-3 custom-black-color d-sm-block d-none"></i>
           </Link>
-          <h2 className="m-0 w-100 text-sm-start text-center pe-3">SUMMARY OF YOUR TEST</h2>
+          <h2 className="m-0 w-100 text-sm-start text-center pe-3" onClick={() => console.log(studentAnswerData)}>
+            SUMMARY OF YOUR TEST
+          </h2>
         </div>
         <div className="col-sm-8 align-self-sm-center d-flex flex-column">
-              <span>Number of Correct Answers: {numberOfCorrect}</span>
-              <span>Number of Wrong Answers: {numberOfWrong}</span>
-              <span>Total Score:  {totalScore} / {maxScore}</span>
-            </div>
+          <span>Number of Correct Answers: {numberOfCorrect}</span>
+          <span>Number of Wrong Answers: {numberOfWrong}</span>
+          <span>
+            Total Score: {totalScore} / {maxScore}
+          </span>
+        </div>
 
-            <div className="container border border-dark rounded d-flex flex-column col-sm-8 align-self-center align-items-center p-2 gap-2 table-responsive">
+        <div className="container border border-dark rounded d-flex flex-column col-sm-8 align-self-center align-items-center p-2 gap-2 table-responsive">
           <table className="table table-bordered">
             <thead>
               <tr className="text-center">
@@ -247,10 +210,35 @@ const renderAnswerKeyAndStudentAnswers = (type) => {
               </tr>
             </thead>
             <tbody>
-              {studentAnswerData.map((answerData, index) => (
-                <tr key={index} className="text-center">
-                  <td>{answerData.type}</td>
-                  {renderAnswerKeyAndStudentAnswers(answerData.type)}
+              {testData.map((testSection, index) => (
+                <tr key={index}>
+                  <td>{testSection.type}</td>
+                  <td>
+                    <ol>
+                      {testSection.questions.map((question, qIndex) => (
+                        <li key={qIndex}>{`${question.answer}`}</li>
+                      ))}
+                    </ol>
+                  </td>
+                  <td>
+                    {studentAnswerData.map((answerSection, aIndex) => {
+                      if (answerSection.type === testSection.type) {
+                        return (
+                          <div key={aIndex}>
+                            <ol>
+                              {answerSection.answers.map(
+                                (answer, answerIndex) => (
+                                  <li
+                                    key={answerIndex}
+                                  >{`${answer.answer}`}</li>
+                                )
+                              )}
+                            </ol>
+                          </div>
+                        );
+                      }
+                    })}
+                  </td>
                 </tr>
               ))}
             </tbody>

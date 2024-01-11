@@ -7,33 +7,52 @@ function AdminDashboard({ clicked, setClicked }) {
   const [facultiesOnline, setFaculties] = useState([]);
   const [studentsOnline, setStudents] = useState([]);
   const [login, setlogin] = useState([]);
+  const [apiKey, setApiKey] = useState([]);
+  const [changings, setChanging] = useState(false);
+  const [apiChange, setApiChange] = useState("");
 
   const handleclick = () => {
     setClicked(!clicked);
   };
 
+  const fetchData = async () => {
+    try {
+      const facultiesResponse = await axios.get(
+        "http://localhost:3001/getfacultyrecords"
+      );
+      setFaculties(facultiesResponse.data.reverse()); // Reverse faculty records
+
+      const studentsResponse = await axios.get(
+        "http://localhost:3001/getstudentrecords"
+      );
+      setStudents(studentsResponse.data.reverse()); // Reverse student records
+
+      const loginResponse = await axios.get("http://localhost:3001/getlogin");
+      setlogin(loginResponse.data.reverse()); // Reverse login records
+
+      const apiresponse = await axios.get("http://localhost:3001/Getting");
+      console.log(apiresponse.data);
+      setApiKey(apiresponse.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const facultiesResponse = await axios.get(
-          "http://localhost:3001/getfacultyrecords"
-        );
-        setFaculties(facultiesResponse.data.reverse()); // Reverse faculty records
-
-        const studentsResponse = await axios.get(
-          "http://localhost:3001/getstudentrecords"
-        );
-        setStudents(studentsResponse.data.reverse()); // Reverse student records
-
-        const loginResponse = await axios.get("http://localhost:3001/getlogin");
-        setlogin(loginResponse.data.reverse()); // Reverse login records
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
     fetchData();
   }, []);
+
+  const ChangedApi = async() => {
+    try {
+      const response = await axios.post("http://localhost:3001/Change", {secret : apiChange});
+      console.log(response.data)
+      if(response.status === 200){
+        setChanging(false)
+        fetchData();
+      }
+    } catch (error) {
+      console.error(error)
+    }  
+  }
 
   const generateloginaudit = async () => {
     try {
@@ -71,8 +90,10 @@ function AdminDashboard({ clicked, setClicked }) {
   };
 
   return (
-    <main className="p-0 
-    Min-vh-100  w-100 position-relative">
+    <main
+      className="p-0 
+    Min-vh-100  w-100 position-relative"
+    >
       <section className="contatiner col-12 text-start  d-flex flex-column align-items-center justify-content-center">
         <div className="d-flex w-100 align-items-center">
           <div className="border-bottom border-dark py-1 ps-sm-0 ps-3">
@@ -87,10 +108,41 @@ function AdminDashboard({ clicked, setClicked }) {
         </div>
         <section className="container-fluid col-12">
           <div className="row p-0 mt-2">
-            <div className="col-6">
+            <div className="col-12">
               <h2>WELCOME!</h2>
             </div>
-            <div className="col-6 d-flex flex-column gap-3 align-self-center ps-1 mb-2"></div>
+            <div className="col-6 d-flex flex-column gap-3 align-self-center ps-1 mb-2 h-100">
+              <h3>Api Key</h3>
+              <div className="col-6">
+                <input
+                  type="text"
+                  {...(changings ? { value: apiChange.slice(-3).padStart(apiChange.length, "*") } : { value: apiKey })}
+                  className="form-control mb-2"
+                  onChange={(e) => setApiChange(e.target.value)}
+                  disabled={!changings}
+                  placeholder={apiKey}
+                />
+
+                {changings ? (
+                  <div className="d-flex gap-2">
+                    <button className="btn btn-outline-success" onClick={ChangedApi}>Save</button>
+                    <button
+                      className="btn btn-outline-danger"
+                      onClick={() => setChanging(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-outline-dark"
+                    onClick={() => setChanging(true)}
+                  >
+                    Change
+                  </button>
+                )}
+              </div>
+            </div>
 
             <div className="col-6 rounded ps-3 p-0 table-responsive custom-table-h">
               <span className="d-flex justify-content-between align-items-center bg-secondary rounded py-1 px-3 ">
@@ -112,7 +164,7 @@ function AdminDashboard({ clicked, setClicked }) {
                   </tr>
                 </thead>
                 <tbody>
-                {studentsOnline.slice(0, 3).map((student, index) => (
+                  {studentsOnline.slice(0, 3).map((student, index) => (
                     <tr key={index}>
                       <td>{student.TUPCID}</td>
                       <td>{student.GSFEACC}</td>

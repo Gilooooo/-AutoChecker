@@ -14,8 +14,9 @@ function MatchCode() {
   const GsfeAcc = params.get("GSFE");
   const router = useRouter();
 
+
   const schema = yup.object().shape({
-    Code: yup.string().length(6, "Invalid 6-Digit Code!").required("Invalid 6-Digit Code!")
+    Code: yup.string().length(6, "Invalid 6-Digit Code").required("Invalid 6-Digit Code")
   });
   const {
     register,
@@ -44,9 +45,10 @@ function MatchCode() {
         </small>
         <form className="row justify-content-center gap-1" onSubmit={handleSubmit(submitForm)}>
           <input
-            type="number"
+            type="text"
             className="col-10 text-center py-1 px-3 border border-dark rounded"
             placeholder="6-Digit Code"
+            maxLength="6"
             {...register("Code")}
           />
           <small className="text-danger text-center">

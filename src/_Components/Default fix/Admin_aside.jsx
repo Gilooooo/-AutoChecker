@@ -92,12 +92,17 @@ function AdminAside({ clicked, setClicked }) {
           </div>
           <div className="d-flex flex-column gap-2">
             <Link
+              href={{ pathname: "/Admin_Page/Admin/Combobox" }}
+              className="link-dark text-decoration-none"
+            >
+              <i className="bi bi-arrow-bar-down fs-3"></i>
+            </Link>
+            <Link
               href={{ pathname: "/Admin_Page/ReportProblem" }}
               className="link-dark text-decoration-none"
             >
               <i className="bi bi-exclamation-triangle fs-3 custom-hover"></i>
             </Link>
-
             <Link
               href={{ pathname: "/Login" }}
               className="text-decoration-none link-dark"
@@ -178,6 +183,15 @@ function AdminAside({ clicked, setClicked }) {
             </Link>
           </div>
           <div className="d-flex flex-column custom-black-color align-self-start gap-2">
+            <Link
+              href={{ pathname: "/Admin_Page/Admin/Combobox" }}
+              className="link-dark text-decoration-none"
+            >
+              <div className="d-flex align-items-center gap-1 custom-hover">
+                <i className="bi bi-arrow-bar-down fs-3"></i>
+                <span className="fs-5">COMBO BOX</span>
+              </div>
+            </Link>
             <Link
               href={{ pathname: "/Admin_Page/ReportProblem" }}
               className="link-dark text-decoration-none"

@@ -14,7 +14,7 @@ function Login() {
   const {setTUPCID} = useTUPCID();
 
   const router = useRouter();
-  const RegExpId = /TUPC-\d{2}-\d{4}$|ID-\d{4}$/;
+  const RegExpId = /TUPC-\d{2}-\d{4}$|\d{2}-\d{3,4}|ADMIN-\d{4}$/;
   const schema = yup.object().shape({
     Tupcid: yup
       .string()
@@ -33,8 +33,13 @@ function Login() {
       const response = await axios.post("http://localhost:3001/Login", data);
       setMessage("");
       setTUPCID(response.data.Uid.toString());
-      const accountType = response.data.accountType.charAt(0).toUpperCase() + response.data.accountType.slice(1);
-      router.push(`/${accountType}`)
+      if (response.data.accountType === "admin"){
+        router.push("/Admin_Page/Admin")
+      }else{
+        const accountType = response.data.accountType.charAt(0).toUpperCase() + response.data.accountType.slice(1);
+        router.push(`/${accountType}`)
+      }
+      
     } catch (err) {
       if (err.response && err.response.status === 404) {
         setMessage(err.response.data.message);
@@ -100,11 +105,6 @@ function Login() {
             </button>
           </div>
         </form>
-        <Link href="/Admin_Page"
-          className="text-decoration-none align-self-center"
-        >
-          Admin
-        </Link>
         <Link
           href="/Login/Password/ForgetPassword"
           className="text-decoration-none align-self-center"

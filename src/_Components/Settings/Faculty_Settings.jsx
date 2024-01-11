@@ -28,7 +28,7 @@ export default function FacultySettings({clicked, setClicked}) {
     const fetchFacultyInfo = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3001/facultyinfos/${TUPCID}`
+          `http://localhost:3001/facultyinfos?TUPCID=${TUPCID}`
         );
         const {
           FIRSTNAME,
@@ -87,7 +87,7 @@ export default function FacultySettings({clicked, setClicked}) {
       setIsEditing(false);
       
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
   

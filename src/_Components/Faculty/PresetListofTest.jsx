@@ -1,6 +1,5 @@
 import { useTUPCID } from "@/app/Provider";
 import axios from "axios";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const renderQuestions = (questionsData) => {
@@ -120,7 +119,7 @@ function Preset({ setClicked, clicked }) {
           </div>
         </div>
         <div className="d-flex justify-content-between w-100 px-sm-2 mt-2">
-          <h3>PRESETS</h3>
+          <h3>TEST BANK</h3>
           <div className="d-flex flex-column align-self-end">
             <small className="text-end">Sort by:</small>
             <div className="d-flex gap-2">

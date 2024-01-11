@@ -1,13 +1,12 @@
 "use client";
 
 import { useTUPCID } from "@/app/Provider";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const Authenticate = (Component) => {
   return (props) => {
     const { TUPCID } = useTUPCID();
-    const router = useRouter();
     const [delay, setDelay] = useState(true);
 
     useEffect(() => {
@@ -21,10 +20,10 @@ const Authenticate = (Component) => {
     useEffect(() => {
       if (!delay) {
         if (!TUPCID) {
-          router.push("/Login");
+          redirect("/Login")
         }
       }
-    }, [TUPCID, delay, router]);
+    }, [TUPCID, delay]);
 
     return !delay && <Component {...props} />;
   };

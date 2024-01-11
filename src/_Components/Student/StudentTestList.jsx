@@ -48,7 +48,6 @@ function StudentTestList({ clicked, setClicked }) {
 
       const enrolledSections = response.data.enrolledSections || [];
       setTestList(enrolledSections);
-      console.log("data i received:  ", enrolledSections);
 
       // Create testNameMap based on Uid_Test and TestName from the backend
       const testNameRows = response.data.testNameMap || [];
@@ -57,13 +56,9 @@ function StudentTestList({ clicked, setClicked }) {
         map[row.Uid_Test] = row.TestName;
       });
 
-      console.log("testname row: ", testNameRows);
-      console.log("testnamemap: ", map);
-
       setTestNameMap(testNameRows);
 
       const { studentScores } = response.data;
-      console.log("Student Scores for test", studentScores);
       setStudentScores(studentScores || []);
     } catch (err) {
       console.error(err);
@@ -229,31 +224,48 @@ function StudentTestList({ clicked, setClicked }) {
                 {/* Published test */}
                 {testNameMap
                   .filter((tests) => tests.Section_Uid === sections.Section_Uid)
-                  .map((Tests, idx) => (
-                    <div
-                      className="p-1 px-3 border border-dark rounded col-12"
-                      key={idx}
-                    >
-                      <Link
-                        href={{
-                          pathname: "/Student/Result",
-                          query: {
-                            studentid: TUPCID,
-                            uidoftest: Tests.Uid_Test,
-                          },
-                        }}
-                        className="link-dark text-decoration-none"
+                  .map((Tests, idx) => {
+                    const scoreObj = studentScores[Tests.Uid_Test];
+                    const scorePending =
+                      !scoreObj || scoreObj.status === "PENDING"; // Check if score is pending or not available
+
+                    return (
+                      <div
+                        className="p-1 px-3 border border-dark rounded col-12"
+                        key={idx}
                       >
-                        <h5 className="m-0 py-2">
-                          Test Uid: {Tests.Uid_Test} | Test Name:{" "}
-                          {Tests.TestName} |{" "}
-                          {studentScores && studentScores.length > idx
-                            ? `GRADED | ${studentScores[idx].TOTALSCORE} / ${studentScores[idx].MAXSCORE}`
-                            : "PENDING | Score not available"}
-                        </h5>
-                      </Link>
-                    </div>
-                  ))}
+                        {/* Disable link if score is pending or not available */}
+                        <div>
+                          {scorePending ? (
+                            <h5 className="m-0 py-2 text-danger">
+                              Test Uid: {Tests.Uid_Test} | Test Name:{" "}
+                              {Tests.TestName} |
+                              {scoreObj
+                                ? "PENDING | Score not available"
+                                : "PENDING | Score Not Available"}
+                            </h5>
+                          ) : (
+                            <Link
+                              href={{
+                                pathname: "/Student/Result",
+                                query: {
+                                  studentid: TUPCID,
+                                  uidoftest: Tests.Uid_Test,
+                                },
+                              }}
+                              className="link-dark text-decoration-none"
+                            >
+                              <h5 className="m-0 py-2 text-success">
+                                Test Uid: {Tests.Uid_Test} | Test Name:{" "}
+                                {Tests.TestName} | GRADED |{" "}
+                                {scoreObj.totalScore} / {scoreObj.maxScore}
+                              </h5>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           ))}
@@ -263,3 +275,4 @@ function StudentTestList({ clicked, setClicked }) {
   );
 }
 export default StudentTestList;
+  

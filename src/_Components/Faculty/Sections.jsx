@@ -14,6 +14,19 @@ function Sections({ setClicked, clicked }) {
   const [subject, setSubject] = useState("");
   const [uid, setUid] = useState("");
   const [message, setMessage] = useState("");
+  const [courseList, setCourseList] = useState([]);
+  const [yearList, setYearList] = useState([]);
+  const [sectionComboList, setSectionComboList] = useState([]);
+
+  const initialOption = "Choose..."; // Define initial dropdown option text
+
+  const resetDropdowns = () => {
+    setSection(initialOption);
+    setYear(initialOption);
+    setCourse(initialOption);
+    setSubject("");
+    setUid("");
+  };
 
   const add = async () => {
     const New = {
@@ -26,11 +39,11 @@ function Sections({ setClicked, clicked }) {
       Year: year,
     };
     if (
-      uid != "" &&
-      section != "" &&
-      subject != "" &&
-      course != "" &&
-      year != ""
+      uid !== "" &&
+      section !== "" &&
+      subject !== "" &&
+      course !== "" &&
+      year !== ""
     ) {
       setMessage("");
       try {
@@ -40,11 +53,7 @@ function Sections({ setClicked, clicked }) {
         );
         if (response.status === 200) {
           fetchingSections();
-          setSection("");
-          setYear("");
-          setCourse("");
-          setSubject("");
-          setUid("");
+          resetDropdowns(); // Reset dropdown values to initial "Choose..." option
         }
       } catch (err) {
         console.error(err);
@@ -69,22 +78,52 @@ function Sections({ setClicked, clicked }) {
     const updatedSections = sectionList.map((section) => {
       if (section.Uid_Section === uid) {
         section.copyClick = !section.copyClick;
-        ClipboardJS.copy(section.Uid_Section)
+        ClipboardJS.copy(section.Uid_Section);
       }
       return section;
     });
     setSectionList(updatedSections);
   };
 
+  const fetchingYear = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/Year");
+      setYearList(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const filterYear = yearList.filter((years) => years.Year !== null)
+  const fetchingCourse = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/Course");
+      setCourseList(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  
+  const fetchingSection = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/Section");
+      setSectionComboList(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const filterSection = sectionComboList.filter((section) => section.Section!== null)
   useEffect(() => {
     const changings = setInterval(() => {
       setCopyClick(false);
       fetchingSections();
+      fetchingCourse();
+      fetchingSection();
+      fetchingYear();
     }, 2000);
     return () => {
       clearInterval(changings);
     };
-  }, [TUPCID,copyClick]);
+  }, [TUPCID, copyClick]);
 
   const generate = () => {
     const randoms = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -95,10 +134,10 @@ function Sections({ setClicked, clicked }) {
     }
     setUid(generated);
   };
+
   const handleclick = () => {
     setClicked(!clicked);
   };
-
   return (
     <main className="w-100 min-vh-100 overflow-auto">
       <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-start p-2">
@@ -107,19 +146,33 @@ function Sections({ setClicked, clicked }) {
             className="d-block d-sm-none bi bi-list fs-5 pe-auto custom-red px-2 rounded"
             onClick={handleclick}
           ></i>
-          <h2 className="m-0 w-100 text-sm-start text-center pe-3">FACULTY</h2>
+          <h2
+            className="m-0 w-100 text-sm-start text-center pe-3"
+            onClick={() => console.log(sectionList.length)}
+          >
+            FACULTY
+          </h2>
         </div>
         <div className="d-flex justify-content-between w-100 ">
           <div className="d-flex gap-3">
-            <h4 className="text-decoration-underline">SECTIONS</h4>
-            <Link
-              href={{
-                pathname: "/Faculty/ListOfTest",
-              }}
-              className="text-decoration-none link-dark"
+            <h4
+              className="text-decoration-underline"
+              onClick={() => console.log(sectionList.length > 0)}
             >
-              <h4>TESTS</h4>
-            </Link>
+              SECTIONS
+            </h4>
+            {sectionList.length > 0 ? (
+              <Link
+                href={{
+                  pathname: "/Faculty/ListOfTest",
+                }}
+                className="text-decoration-none link-dark"
+              >
+                <h4>TESTS</h4>
+              </Link>
+            ) : (
+              <h4 className="link-secondary custom-cursor">TESTS</h4>
+            )}
           </div>
         </div>
         <div className="d-flex justify-content-between w-100 position-relative">
@@ -181,10 +234,11 @@ function Sections({ setClicked, clicked }) {
                         id="Year"
                         className="py-1 px-3 rounded border border-dark col-4"
                       >
-                        <option value="1ST">1ST</option>
-                        <option value="2ND">2ND</option>
-                        <option value="3RD">3RD</option>
-                        <option value="4TH">4TH</option>
+                        {" "}
+                        <option value="">{initialOption}</option>
+                        {filterYear.map((years, index) => (
+                          <option value={years.Year} key={index}>{years.Year}</option>
+                        ))}
                       </select>
                       <select
                         value={course}
@@ -193,21 +247,12 @@ function Sections({ setClicked, clicked }) {
                         id="Course"
                         className="py-1 px-3 rounded border border-dark col-4"
                       >
-                        <option value="BSCE">BSCE</option>
-                        <option value="BSEE">BSEE</option>
-                        <option value="BSME">BSME</option>
-                        <option value="BSIE ICT">BSIE ICT</option>
-                        <option value="BSIE IA">BSIE IA</option>
-                        <option value="BSIE HE">BSIE HE</option>
-                        <option value="BTTE CP">BTTE CP</option>
-                        <option value="BTTE EL">BTTE EL</option>
-                        <option value="BET AT">BET AT</option>
-                        <option value="BET CT">BET CT</option>
-                        <option value="BET COET">BET COET</option>
-                        <option value="BET ET">BET ET</option>
-                        <option value="BET ESET">BET ESET</option>
-                        <option value="BET MT">BET MT</option>
-                        <option value="BET PPT">BET PPT</option>
+                        <option value="">{initialOption}</option>
+                        {courseList.map((courses, index) => (
+                          <option value={courses.Course_Acronym} key={index}>
+                            {courses.Course_Acronym}
+                          </option>
+                        ))}
                       </select>
                       <select
                         value={section}
@@ -216,10 +261,12 @@ function Sections({ setClicked, clicked }) {
                         id="Section"
                         className="py-1 px-3 rounded border border-dark col-3"
                       >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
+                        <option value="">{initialOption}</option>
+                        {filterSection.map((sections, index) => (
+                          <option value={sections.Section} key={index}>
+                            {sections.Section}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <label className="m-0 text-start col-12">JOIN CODE</label>
@@ -271,7 +318,9 @@ function Sections({ setClicked, clicked }) {
                     query: `Section=${section.Section_Name}&Uid_Section=${section.Uid_Section}`,
                   }}
                 >
-                  <span>{section.Section_Name} {section.Subject}</span>
+                  <span>
+                    {section.Section_Name} {section.Subject}
+                  </span>
                 </Link>
               </div>
               <div className="d-flex border border-dark rounded col-lg-2 col-md-3 col-sm-4 col-5 justify-content-between align-items-center">

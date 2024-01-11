@@ -3,7 +3,7 @@
 function OptionPosition({ faculty, student }) {
   return (
     <main className="d-flex flex-column justify-content-center align-items-center min-vh-100">
-      <h2>CHOOSE YOUR POSITION</h2>
+      <h2>I AM A</h2>
       <section className="row gap-4 justify-content-center">
         <div
           data-bs-toggle="modal"

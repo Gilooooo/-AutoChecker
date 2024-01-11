@@ -8,6 +8,8 @@ function ListOfTest({ setClicked, clicked }) {
   const { TUPCID } = useTUPCID();
   const [published, setPublished] = useState(false);
   const [TestName, setTestName] = useState("");
+  const [semList, setSemList] = useState([]);
+  const [periodList, setPeriodList] = useState([]);
   const [Subject, setSubject] = useState("");
   const [uid, setUid] = useState("");
   const [section, setSection] = useState("");
@@ -16,15 +18,17 @@ function ListOfTest({ setClicked, clicked }) {
   const [semester, setSemester] = useState("");
   const [exam, setExam] = useState("");
   const [sectionSubjectName, setSectionSubjectName] = useState([]);
+  const [filteredSections, setFilteredSections] = useState([]);
   const [sorted, setSorted] = useState(false);
   const [publishedTest, setPublishedTest] = useState([]);
   const [sectionUid, setSectionUid] = useState("");
-  const [publishing, setPublishing] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [warning, setWarning] = useState(false);
 
   const add = async () => {
     const New = {
       TestName: TestName,
-      Subject: Subject,
+      Subject: selectedSubject,
       UidTest: uid,
       SectionName: section,
       UidProf: TUPCID,
@@ -32,17 +36,26 @@ function ListOfTest({ setClicked, clicked }) {
       Uid_section: sectionUid,
     };
     if (
-      TestName != "" &&
-      Subject != "" &&
-      section != "" &&
-      uid != "" &&
-      semester != "" &&
-      exam != ""
+      TestName !== "" &&
+      selectedSubject !== "" && // Use selectedSubject here
+      section !== "" &&
+      uid !== "" &&
+      semester !== "" &&
+      exam !== ""
     ) {
       setMessage("");
       try {
-        const response = await axios.get(`http://localhost:3001/CheckTestName?TestName=${TestName}`)
-        console.log(response.data)
+        const response = await axios.get(
+          `http://localhost:3001/CheckTestName`,
+          {
+            params: {
+              TestName: TestName,
+              Subject: selectedSubject,
+              SectionName: section,
+              Semester: semester + ":" + exam,
+            },
+          }
+        );
         if (response.status === 200) {
           const response1 = await axios.post(
             "http://localhost:3001/TestList",
@@ -50,12 +63,17 @@ function ListOfTest({ setClicked, clicked }) {
           );
           if (response1.status === 200) {
             fetchingTestList();
+            setSemester("");
+            setExam("");
           }
-          setSemester("");
+
           setTestName("");
           setSubject("");
           setSection("");
           setUid("");
+          setSelectedSubject(""); // Reset the selected subject
+          setFilteredSections([]);
+          // Reset the filtered sections
         }
       } catch (err) {
         setMessage(err.response.data.message);
@@ -99,7 +117,6 @@ function ListOfTest({ setClicked, clicked }) {
         `http://localhost:3001/TestList?UidTest=${data}`
       );
       if (response.status === 200) {
-        alert("remove");
         fetchingTestList();
       }
     } catch (err) {
@@ -158,22 +175,25 @@ function ListOfTest({ setClicked, clicked }) {
       console.error("Fetching failed");
     }
   };
-  useEffect(() => {
-    const fetching = setInterval(() => {
-      if (sorted) {
-        return;
-      }
-      checkingPublish();
-      fetchingTestList();
-      fetchingSectionName();
-    }, 2000);
-    return () => {
-      clearInterval(fetching);
-    };
-  }, [TUPCID, sorted, Uidtest]);
+  const fetchSem = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/Semester");
+      setSemList(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const fetchPeriod = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/Period");
+      setPeriodList(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const generate = () => {
-    const randoms = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const randoms = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     var generated = "";
     for (let i = 0; i < 5; i++) {
       const generating = randoms[Math.floor(Math.random() * randoms.length)];
@@ -186,9 +206,37 @@ function ListOfTest({ setClicked, clicked }) {
   };
 
   const sectionName = (selectedSection) => {
-    setSection(selectedSection.split(",")[0]);
-    setSectionUid(selectedSection.split(",")[1]);
+    const [sectionName, sectionUid] = selectedSection.split(",");
+    setSection(sectionName);
+    setSectionUid(sectionUid);
   };
+
+  const handleSubjectChange = (selectedSubject) => {
+    // Filter sections based on the selected subject
+    const sectionsForSubject = sectionSubjectName.filter(
+      (section) => section.Subject === selectedSubject
+    );
+    setFilteredSections(sectionsForSubject);
+
+    // Update only the selectedSubject state here
+    setSelectedSubject(selectedSubject);
+  };
+
+  useEffect(() => {
+    const fetching = setInterval(() => {
+      if (sorted) {
+        return;
+      }
+      fetchPeriod();
+      fetchSem();
+      checkingPublish();
+      fetchingTestList();
+      fetchingSectionName();
+    }, 2000);
+    return () => {
+      clearInterval(fetching);
+    };
+  }, [TUPCID, sorted, Uidtest]);
   return (
     <main className="w-100 min-vh-100">
       <section className="contatiner col-12 text-sm-start text-center d-flex flex-column align-items-start p-2">
@@ -271,10 +319,11 @@ function ListOfTest({ setClicked, clicked }) {
                     />
                     <p className="m-0">SUBJECT</p>
                     <select
-                      onChange={(e) => setSubject(e.target.value)}
+                      onChange={(e) => handleSubjectChange(e.target.value)}
                       className="px-3 py-1 rounded border border-dark col-12"
+                      value={selectedSubject} // Ensure the value is set to selectedSubject
                     >
-                      <option selected hidden disabled>
+                      <option value="" disabled>
                         Choose...
                       </option>
                       {sectionSubjectName.map((subject, index) => (
@@ -283,53 +332,62 @@ function ListOfTest({ setClicked, clicked }) {
                         </option>
                       ))}
                     </select>
-                    <label htmlFor="#SectionName">Section Name</label>
+
+                    <label htmlFor="#SectionName">SECTION NAME</label>
                     <div className="row col-12 m-0 gap-sm-4 gap-3">
                       <select
                         name="SectionName"
                         id="SectionName"
                         className="py-1 px-3 rounded border border-dark"
                         onChange={(e) => sectionName(e.target.value)}
+                        value={section}
                       >
-                        <option selected hidden disabled>
-                          Choose...
+                        <option value="" disabled>
+                          {selectedSubject
+                            ? "Choose..."
+                            : "Select a subject first"}
                         </option>
-                        {sectionSubjectName.map((sections, index) => (
+                        {filteredSections.map((section, index) => (
                           <option
-                            value={[
-                              sections.Section_Name,
-                              sections.Uid_Section,
-                            ]}
+                            value={[section.Section_Name, section.Uid_Section]}
                             key={index}
                           >
-                            {sections.Section_Name} {sections.Uid_Section}
+                            {section.Section_Name}, {section.Uid_Section}
                           </option>
                         ))}
                       </select>
                     </div>
-                    <p className="m-0">Semester</p>
+                    <p className="m-0">SEMESTER</p>
                     <select
                       className="px-3 py-1 border border-dark rounded col-12"
                       onChange={(e) => setSemester(e.target.value)}
+                      value={semester || ""}
                     >
-                      <option selected hidden disabled>
+                      <option value="" disabled>
                         Choose...
                       </option>
-                      <option value="1st Semester">1st Semester</option>
-                      <option value="2nd Semester">2nd Semester</option>
+                      {semList.map((semes, index) => (
+                        <option value={semes.Semester} key={index}>
+                          {semes.Semester}
+                        </option>
+                      ))}
                     </select>
-                    <p className="m-0">Exam</p>
+                    <p className="m-0">PERIOD</p>
                     <select
                       className="px-3 py-1 border border-dark rounded col-12"
                       onChange={(e) => setExam(e.target.value)}
+                      value={exam || ""}
                     >
-                      <option selected hidden disabled>
+                      <option value="" disabled>
                         Choose...
                       </option>
-                      <option value="Prelim">Prelim</option>
-                      <option value="Midterm">Midterm</option>
-                      <option value="Final">Final</option>
+                      {periodList.map((period, index) => (
+                        <option value={period.Period} key={index}>
+                          {period.Period}
+                        </option>
+                      ))}
                     </select>
+
                     <p className="m-0">UID</p>
                     <div className="row m-0 gap-sm-3 gap-2">
                       <input
@@ -366,7 +424,6 @@ function ListOfTest({ setClicked, clicked }) {
               </div>
             </div>
             {/* End of Modal for Add test */}
-
           </div>
           <div className="dropdown align-self-center">
             <i
@@ -433,13 +490,13 @@ function ListOfTest({ setClicked, clicked }) {
                 <span>
                   <Link
                     href={{
-                      pathname: "/Faculty/Test/TestPaper",
+                      pathname: "/Faculty/Test/Question_Answer",
                       query: {
                         testname: test.TestName,
                         uid: test.Uid_Test,
                         sectionname: test.Section_Name,
                         semester: test.Semester,
-                        subject: test.Subject
+                        subject: test.Subject,
                       },
                     }}
                     className="link-dark text-decoration-none
@@ -460,7 +517,9 @@ function ListOfTest({ setClicked, clicked }) {
                     <li>
                       <a
                         className="dropdown-item"
-                        onClick={() => removeTest(test.Uid_Test)}
+                        type="button"
+                        data-bs-toggle="modal"
+                        data-bs-target={`#Deleting${index}`}
                       >
                         Remove
                       </a>
@@ -526,7 +585,46 @@ function ListOfTest({ setClicked, clicked }) {
                   </div>
                 </div>
               </div>
-
+              {/* end modal */}
+              {/* Modal */}
+              <div
+                className="modal fade"
+                tabIndex="-1"
+                id={`Deleting${index}`}
+                aria-labelledby={`deleting${index}`}
+                aria-hidden="true"
+              >
+                <div className="modal-dialog modal-dialog-centered">
+                  <div className="modal-content border border-dark">
+                    <div className="modal-header">
+                      <h5 className="modal-title" id="deleting">
+                        Delete Test
+                      </h5>
+                    </div>
+                    <div className="modal-body">
+                      <p className="text-center">
+                        Are you sure to delete this test?
+                      </p>
+                    </div>
+                    <div className="modal-footer align-self-center">
+                      <button
+                        type="button"
+                        className="btn btn-success"
+                        data-bs-dismiss="modal"
+                        onClick={() => removeTest(test.Uid_Test)}
+                      >
+                        YES
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        data-bs-dismiss="modal"
+                      >
+                        CANCEL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               {/* end modal */}
             </div>
           ))}

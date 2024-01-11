@@ -4,12 +4,9 @@ import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { useTUPCID } from "@/app/Provider";
 import Link from "next/link";
-import TesseractOCR from "./camera/tesseract";
-import TextLocalization from "./camera/textLocalization";
-import TextLocalization2 from "./camera/textlocalizationword";
-import ImageInput from "@/app/Faculty/Test/opencv/page";
-
-
+import TextLocalization1 from "./camera/textLocalization1";
+import ImageInput1 from "@/app/Faculty/Test/upload1/page";
+import ImageInput2 from "@/app/Faculty/Test/upload2/page";
 
 export default function AnswerKey() {
   const { TUPCID } = useTUPCID();
@@ -21,64 +18,188 @@ export default function AnswerKey() {
   const semester = searchparams.get("semester");
   const [testData, setTestData] = useState([]);
   const [testType, setTestType] = useState("No Test Paper Yet");
-  const [ImageData, setImageData] = useState(null);
-  const [processedImageData, setProcessedImageData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [studentAnswerData, setStudentAnswerData] = useState([]);
-  const [studentid, setStudentId] = useState(null);
-  const [uidfromtestpaper, setuidfromtestpaper] = useState(null);
-  const [processedImageCount, setProcessedImageCount] = useState(0);
-  const [comparisonResults, setComparisonResults] = useState(null);
+  const [api, setApi] = useState("");
+  const [ImageData1, setImageData1] = useState(null);
+  const [ImageData2, setImageData2] = useState(null);
+  const [ImageData3, setImageData3] = useState(null);
+  const [totalScoreValue, setTotalScoreValue] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
   const [totalScore2, setTotalScore2] = useState(0);
   const [Wrong, setWrong] = useState(0);
-  const [showPopup, setShowPopup] = useState(false);
-  const [students, setStudents] = useState([]);
-  const [totalScoreValue, setTotalScoreValue] = useState(0); 
+  const [Correct, setCorrect] = useState(0);
+  const [studentid, setstudentid] = useState([]);
+  const [uidget, setuidget] = useState([]);
+  const [testType2, setTestType2] = useState([]);
 
+  const handleImageSelected1 = (retrievedImages) => {
+    setImageData1(retrievedImages);
+  };
 
+  const handleImageSelected2 = (retrievedImages) => {
+    setImageData2(retrievedImages);
+  };
+
+  const handleImageSelected3 = (retrievedImages) => {
+    setImageData3(retrievedImages);
+  };
+
+  const [MultipleChoice, setMultipleChoice] = useState(null);
+  const [MultipleChoicearray1, setMultipleChoicearray1] = useState([]);
+  const [MultipleChoicearray2, setMultipleChoicearray2] = useState([]);
+
+  const [TrueFalse, setTrueFalse] = useState(null);
+  const [TrueFalsearray1, setTrueFalsearray1] = useState([]);
+  const [TrueFalsearray2, setTrueFalsearray2] = useState([]);
+
+  const [Identification, setIdentification] = useState(null);
+  const [Identificationarray1, setIdentificationarray1] = useState([]);
+  const [Identificationarray2, setIdentificationarray2] = useState([]);
+
+  const extractedStudentId = (textArray) => {
+    let studentId = "";
+    for (let i = 0; i < textArray.length; i++) {
+      if (textArray[i].includes("TUPCID:")) {
+        const parts = textArray[i].split(":");
+        if (parts.length === 2) {
+          studentId = parts[1].trim();
+          break;
+        }
+      }
+    }
+    return studentId;
+  };
+
+  const extracteduid = (textArray) => {
+    let uidget = "";
+    for (let i = 0; i < textArray.length; i++) {
+      if (textArray[i].includes("UID:")) {
+        const parts = textArray[i].split(":");
+        if (parts.length === 2) {
+          uidget = parts[1].trim();
+          break;
+        }
+      }
+    }
+    return uidget;
+  };
+
+  const fetchingApi = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/Getting2");
+      if (response.status === 200) {
+        setApi(response.data[0].Secret);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleMultipleChoice = (data) => {
+    setMultipleChoice(data);
+    const allTextArray = data;
+    const studentId = extractedStudentId(allTextArray);
+    const UIDpaper = extracteduid(allTextArray);
+
+    setMultipleChoicearray1(allTextArray.slice(0, 4));
+    const updatedArray2 = allTextArray.slice(4).map((line) => {
+      const lastLetter = line.charAt(line.length - 1);
+      return lastLetter;
+    });
+    setMultipleChoicearray2(updatedArray2);
+    setuidget(UIDpaper);
+    setstudentid(studentId);
+    setTestType2((prevTypes) =>
+      prevTypes.includes("MULTIPLE CHOICE")
+        ? prevTypes
+        : [...prevTypes, "MULTIPLE CHOICE"]
+    );
+  };
+
+  const handleTrueFalse = (data) => {
+    setTrueFalse(data);
+    const allTextArray = data;
+    const studentId = extractedStudentId(allTextArray);
+    const UIDpaper = extracteduid(allTextArray);
+
+    setTrueFalsearray1(allTextArray.slice(0, 4));
+
+    const updatedArray2 = allTextArray.slice(4).map((line) => {
+      const lastLetter = line.charAt(line.length - 1);
+      return lastLetter;
+    });
+    setTrueFalsearray2(updatedArray2);
+    setuidget(UIDpaper);
+    setstudentid(studentId);
+    setTestType2((prevTypes) =>
+      prevTypes.includes("TRUE OR FALSE")
+        ? prevTypes
+        : [...prevTypes, "TRUE OR FALSE"]
+    );
+  };
+
+  const handleIdentification = (data) => {
+    setIdentification(data);
+    const allTextArray = data;
+    const studentId = extractedStudentId(allTextArray);
+    const UIDpaper = extracteduid(allTextArray);
+
+    setIdentificationarray1(allTextArray.slice(0, 4));
+
+    const updatedArray2 = allTextArray
+      .slice(4)
+      .map((line) => line.replace(/ /g, ""));
+    setIdentificationarray2(updatedArray2);
+    setuidget(UIDpaper);
+    setstudentid(studentId);
+    setTestType2((prevTypes) =>
+      prevTypes.includes("IDENTIFICATION")
+        ? prevTypes
+        : [...prevTypes, "IDENTIFICATION"]
+    );
+  };
 
   useEffect(() => {
-    // Update totalScore with the value obtained from totalScoreValue state
     setTotalScore(totalScoreValue);
-
   }, [totalScoreValue]);
 
-  const updateStudentId = (newStudentId) => {
-    setStudentId(newStudentId);
-  };
+  const [dataResult, setDataResult] = useState([]);
+  const [allAnswerArrays, setAllAnswerArrays] = useState([]);
 
-  const handleUIDDetected = (detectedUID) => {
-    setuidfromtestpaper(detectedUID);
-  };
+  useEffect(() => {
+    // Create an array of arrays, each containing non-empty trimmed lines
+    const combinedArray = [
+      MultipleChoicearray2.filter((line) => line.trim() !== ""),
+      TrueFalsearray2.filter((line) => line.trim() !== ""),
+      Identificationarray2.filter((line) => line.trim() !== ""),
+    ];
 
-  const handleImageSelected = (retrievedImages) => {
-    setImageData(retrievedImages);
-    setProcessedImageData(retrievedImages);
-    setProcessedImageCount(retrievedImages.length);
-  };
+    // Update the state with the combined array
+    setAllAnswerArrays(combinedArray);
+  }, [MultipleChoicearray2, TrueFalsearray2, Identificationarray2]);
+
+  useEffect(() => {}, [
+    studentid,
+    uidget,
+    testType2,
+    Wrong,
+    Correct,
+    totalScore2,
+    totalScoreValue,
+    allAnswerArrays,
+  ]);
+
+  const [showPopup, setShowPopup] = useState(false);
+  const [students, setStudents] = useState({});
 
   const toRoman = (num) => {
-    const romanNumerals = [
-      "I",
-      "II",
-      "III",
-      "IV",
-      "V",
-      "VI",
-      "VII",
-      "VIII",
-      "IX",
-      "X",
-    ];
+    const romanNumerals = ["I", "II"];
     return romanNumerals[num] || num;
   };
 
   const fetchQuestionData = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3001/getquestionstypeandnumberandanswer/${uid}`
+        `http://localhost:3001/getquestionstypeandnumberandanswer?uid=${uid}`
       );
       if (response.status === 200) {
         const {
@@ -86,7 +207,7 @@ export default function AnswerKey() {
           questionTypes,
           answers,
           score,
-          totalScoreValue
+          totalScoreValue,
         } = response.data;
 
         const organizedData = questionTypes.reduce((acc, type, index) => {
@@ -103,21 +224,26 @@ export default function AnswerKey() {
               };
             }
 
-            acc[type].questions.push({ questionNumber, answer, score: questionScore });
+            acc[type].questions.push({
+              questionNumber,
+              answer,
+              score: questionScore,
+            });
             acc[type].score += questionScore || 0;
           }
           return acc;
         }, {});
 
-        const organizedDataArray = Object.entries(organizedData).map(([type, data]) => ({
-          type,
-          questions: data.questions,
-          score: data.score,
-        }));
+        const organizedDataArray = Object.entries(organizedData).map(
+          ([type, data]) => ({
+            type,
+            questions: data.questions,
+            score: data.score,
+          })
+        );
 
         setTestData(organizedDataArray);
         setTotalScoreValue(totalScoreValue);
-
       } else {
         console.error("Error fetching data");
       }
@@ -128,157 +254,128 @@ export default function AnswerKey() {
 
   useEffect(() => {
     fetchQuestionData();
+    fetchingApi();
   }, []);
 
+  useEffect(() => {
+    const calculateTotalScore = () => {
+      let totalScore = 0;
+      let scorePointsArray = [];
+      let numberOfCorrect = 0;
+      let numberOfWrong = 0;
 
+      testData.forEach((testSection, testIndex) => {
+        if (testSection.type === "MultipleChoice" && MultipleChoice) {
+          // Handling MultipleChoice type
+          testSection.questions.forEach((question, questionIndex) => {
+            const studentAnswer = MultipleChoicearray2.filter(
+              (line) => line.trim() !== ""
+            )[questionIndex];
+            const matchingQuestion = testSection.questions[questionIndex];
 
-  const fetchStudentAnswers = async () => {
-    try {
-      let dataAvailable = false;
+            if (studentAnswer && matchingQuestion && matchingQuestion.answer) {
+              const isCorrect = studentAnswer
+                .trim()
+                .toUpperCase()
+                .includes(matchingQuestion.answer.trim().toUpperCase());
+              const scorePoints = isCorrect
+                ? parseInt(matchingQuestion.score)
+                : 0;
 
-      while (!dataAvailable) {
-        const response = await axios.get(
-          `http://localhost:3001/getstudentanswers/${studentid}/${uidfromtestpaper}`
-        );
+              totalScore += scorePoints;
+              scorePointsArray.push(scorePoints);
 
-        if (response.status === 200) {
-          const {
-            testType: fetchedTestType,
-            questionNumbers,
-            questionTypes,
-            answers,
-          } = response.data;
-
-          const filteredData = questionTypes.reduce((acc, type, index) => {
-            if (type && answers[index]) {
-              const questionNumber = questionNumbers[index];
-              const answer = answers[index];
-
-
-              if (!acc[type]) {
-                acc[type] = [];
+              if (isCorrect) {
+                numberOfCorrect++;
+              } else {
+                numberOfWrong++;
               }
-              acc[type].push({ questionNumber, answer });
+            } else {
+              scorePointsArray.push(0);
+              numberOfWrong++;
             }
-            return acc;
-          }, {});
+          });
+        } else if (testSection.type === "Identification" && Identification) {
+          // Handling Identification type
+          testSection.questions.forEach((question, questionIndex) => {
+            const studentAnswer = Identificationarray2.filter(
+              (line) => line.trim() !== ""
+            )[questionIndex];
+            const matchingQuestion = testSection.questions[questionIndex];
 
-          const organizedDataArray2 = Object.entries(filteredData).map(
-            ([type, data]) => ({
-              type,
-              answers: data,
-            })
-          );
+            if (studentAnswer && matchingQuestion && matchingQuestion.answer) {
+              const isCorrect = studentAnswer
+                .trim()
+                .toUpperCase()
+                .includes(matchingQuestion.answer.trim().toUpperCase());
+              const scorePoints = isCorrect
+                ? parseInt(matchingQuestion.score)
+                : 0;
 
-          setStudentAnswerData(organizedDataArray2);
-          setTestType(fetchedTestType || "No Test Paper Created Yet");
-          dataAvailable = true;
-        } else {
-          console.error("Error fetching student answers");
+              totalScore += scorePoints;
+              scorePointsArray.push(scorePoints);
+
+              if (isCorrect) {
+                numberOfCorrect++;
+              } else {
+                numberOfWrong++;
+              }
+            } else {
+              scorePointsArray.push(0);
+              numberOfWrong++;
+            }
+          });
+        } else if (testSection.type === "TrueFalse" && TrueFalse) {
+          // Handling TrueFalse type
+          testSection.questions.forEach((question, questionIndex) => {
+            const studentAnswer = TrueFalsearray2.filter(
+              (line) => line.trim() !== ""
+            )[questionIndex];
+            const matchingQuestion = testSection.questions[questionIndex];
+
+            if (studentAnswer && matchingQuestion && matchingQuestion.answer) {
+              const isCorrect = studentAnswer
+                .trim()
+                .toUpperCase()
+                .includes(matchingQuestion.answer.trim().toUpperCase());
+              const scorePoints = isCorrect
+                ? parseInt(matchingQuestion.score)
+                : 0;
+
+              totalScore += scorePoints;
+              scorePointsArray.push(scorePoints);
+
+              if (isCorrect) {
+                numberOfCorrect++;
+              } else {
+                numberOfWrong++;
+              }
+            } else {
+              // If the student's answer or the correct answer is not available, or it's incorrect, push 0
+              scorePointsArray.push(0);
+              numberOfWrong++;
+            }
+          });
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-    } catch (error) {
-      console.error("Error fetching student answers:", error);
-    }
-  };
-
-
-  // Inside the useEffect that calculates totalScore2
-  useEffect(() => {
-    const calculateTotalScore2 = () => {
-      let totalScore2 = 0;
-  
-      studentAnswerData.forEach((answerSection, index) => {
-        answerSection.answers.forEach((answer) => {
-          const matchingTestSection = testData[index];
-          if (matchingTestSection) {
-            const matchingQuestion = matchingTestSection.questions.find(
-              (question) => question.questionNumber === answer.questionNumber
-            );
-  
-            if (matchingQuestion && matchingQuestion.answer === answer.answer) {
-              totalScore2 += matchingQuestion.score;
-            }
-          }
-        });
       });
-  
-      setTotalScore2(totalScore2);
-  
-      const wrongAnswers = totalScoreValue - totalScore2;
-  
-      setWrong(wrongAnswers);
-  
-      console.log("Total Score 2:", totalScore2);
-      console.log("Wrong Answers:", wrongAnswers);
-    };
-  
-    calculateTotalScore2();
-  }, [studentAnswerData, testData, totalScoreValue]);
-  
-  
 
-
-  useEffect(() => {
-    let timerId;
-
-    const fetchDataWithDelay = async () => {
-      timerId = setTimeout(async () => {
-        await fetchStudentAnswers();
-        setShowPopup(true);
-      }, 20000);
+      setTotalScore2(totalScore);
+      // Assuming you have state variables to store the number of correct and wrong answers
+      setCorrect(numberOfCorrect);
+      setWrong(numberOfWrong);
+      console.log("check testtype: ", testType2);
     };
 
-    if (studentid !== null && uidfromtestpaper !== null) {
-      fetchDataWithDelay();
-    }
-
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [studentid, uidfromtestpaper]);
-
-
-  const sendStudentData = async () => {
-    try {
-      // Fetch student answers from the backend endpoint
-      const response = await axios.put(
-        `http://localhost:3001/updatestudentanswers/${studentid}/${uidfromtestpaper}`
-      );
-
-      const { data: { updatedAnswers } } = response;
-      console.log("updated answers:", updatedAnswers)
-
-      const absoluteWrong = Math.abs(Wrong);
-
-
-      // Use the updated answers to post to another endpoint if needed
-      const sendData = {
-        TUPCID: studentid,
-        UID: uidfromtestpaper,
-        results: updatedAnswers,
-        correct: totalScore2,
-        wrong: absoluteWrong,
-        totalscore2: totalScore2,
-        maxscore: totalScore
-      };
-
-      const resultResponse = await axios.post('http://localhost:3001/sendanswertoresult', sendData);
-
-        // Resetting states or clearing values after sending data
-    setStudentId(null);
-    setStudents([]);
-    setTotalScore(0);
-    setStudentAnswerData([]);
-    setShowPopup(false);
-  } catch (error) {
-    console.error('Error sending data:', error);
-  }
-};
-
-
+    calculateTotalScore();
+  }, [
+    testData,
+    MultipleChoicearray2,
+    MultipleChoice,
+    TrueFalse,
+    Identification,
+    Identificationarray2,
+    TrueFalsearray2,
+  ]);
 
   const fetchStudentname = async () => {
     try {
@@ -297,6 +394,57 @@ export default function AnswerKey() {
     }
   }, [studentid]);
 
+  const sendresult = async () => {
+    const transformedTypes = testType2.map((type) => {
+      switch (type) {
+        case "MULTIPLE CHOICE":
+          return "MultipleChoice";
+        case "TRUE OR FALSE":
+          return "TrueFalse";
+        case "IDENTIFICATION":
+          return "Identification";
+        default:
+          return type;
+      }
+    });
+
+    if (uid !== uidget) {
+      alert("UID and UID in paper do not match. Data will not be sent.");
+      return;
+    }
+
+    // Filter out empty arrays from allAnswerArrays
+    const nonEmptyAnswers = allAnswerArrays.filter(
+      (answerArray) => answerArray.length > 0
+    );
+
+    const data = {
+      studentid: studentid,
+      uid: uid,
+      testtype2: transformedTypes,
+      result: nonEmptyAnswers,
+      correct: Correct,
+      wrong: Wrong,
+      totalscore: totalScore2,
+      maxscore: totalScoreValue,
+    };
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3001/sendresult",
+        data
+      );
+      console.log(response.data);
+      if (response.status === 200) {
+        alert("SEND DATA SUCCESSFULLY"); // Data added to the test successfully
+      } else {
+        throw new Error("Failed to add data to the test");
+      }
+    } catch (error) {
+      console.error("Error sending data to the server:", error);
+    }
+  };
+
   return (
     <main className="min-vh-100 w-100 p-2">
       <section>
@@ -312,13 +460,13 @@ export default function AnswerKey() {
         <ul className="d-flex flex-wrap justify-content-around mt-3 list-unstyled">
           <Link
             href={{
-              pathname: "/Faculty/Test/TestPaper",
+              pathname: "/Faculty/Test/Question_Answer",
               query: {
                 testname: testname,
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                subject: subject
+                subject: subject,
               },
             }}
             className="text-decoration-none link-dark"
@@ -333,7 +481,7 @@ export default function AnswerKey() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                subject: subject
+                subject: subject,
               },
             }}
             className="text-decoration-none link-dark"
@@ -349,7 +497,7 @@ export default function AnswerKey() {
                 uid: uid,
                 sectionname: sectionname,
                 semester: semester,
-                subject: subject
+                subject: subject,
               },
             }}
             className="text-decoration-none link-dark"
@@ -367,104 +515,336 @@ export default function AnswerKey() {
 
               {testData.map((testSection, index) => (
                 <div key={index}>
-                  <h6 className="col-12 mt-4">{`TEST ${toRoman(index)}`}</h6>
+                  <h6 className="col-12 mt-4">{`TEST ${toRoman(index)}  ${
+                    testSection.type
+                  }`}</h6>
                   <ul className="col-6 list-unstyled">
                     {testSection.questions.map((question, qIndex) => (
                       <li key={qIndex}>
                         {`${question.questionNumber}. ${question.answer} `}
                       </li>
                     ))}
+                    {index === 0 && (
+                      <ImageInput1 onImageSelected={handleImageSelected1} />
+                    )}
+                    {index === 0 && ImageData1 && (
+                      // Check the testSection type and set the appropriate setData function
+                      <>
+                        {testSection.type === "MultipleChoice" && (
+                          <TextLocalization1
+                            api={api}
+                            imageData={ImageData1}
+                            setData={handleMultipleChoice}
+                          />
+                        )}
+                        {testSection.type === "TrueFalse" && (
+                          <TextLocalization1
+                            api={api}
+                            imageData={ImageData1}
+                            setData={handleTrueFalse}
+                          />
+                        )}
+                        {testSection.type === "Identification" && (
+                          <TextLocalization1
+                            api={api}
+                            imageData={ImageData1}
+                            setData={handleIdentification}
+                          />
+                        )}
+                      </>
+                    )}
+
+                    {index === 1 && (
+                      <ImageInput2 onImageSelected={handleImageSelected2} />
+                    )}
+                    {index === 1 && ImageData2 && (
+                      // Check the testSection type and set the appropriate setData function
+                      <>
+                        {testSection.type === "MultipleChoice" && (
+                          <TextLocalization1
+                            api={api}
+                            imageData={ImageData2}
+                            setData={handleMultipleChoice}
+                          />
+                        )}
+                        {testSection.type === "TrueFalse" && (
+                          <TextLocalization1
+                            api={api}
+                            imageData={ImageData2}
+                            setData={handleTrueFalse}
+                          />
+                        )}
+                        {testSection.type === "Identification" && (
+                          <TextLocalization1
+                            api={api}
+                            imageData={ImageData2}
+                            setData={handleIdentification}
+                          />
+                        )}
+                      </>
+                    )}
                   </ul>
                 </div>
               ))}
-
             </div>
             <div className="col-6">
               <h5 className="m-0 text-center align-self-center">
-                TUPCID: {studentid}{" "}
+                STUDENT ID: {studentid}
               </h5>
               <h5 className="m-0 text-center align-self-center">
-                Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}
+                UID: {uidget}
               </h5>
+
               <h5 className="m-0 text-center align-self-center">
                 STUDENT ANSWER
               </h5>
-              <p>Total Score: {totalScore2} POINTS </p>
-              {studentAnswerData.map((answerSection, index) => (
+              <p>
+                Total Score: {totalScore2} / {totalScoreValue}{" "}
+              </p>
+
+              {testData.map((testSection, index, total) => (
                 <div key={index}>
-                  <h6 className="col-12 mt-4">{`TEST ${toRoman(index)}`}</h6>
-                  <ul className="col-6 list-unstyled">
-                    {answerSection.answers.map((answer, aIndex) => {
-                      // Find the corresponding question in testData for scoring logic
-                      const matchingTestSection = testData[index];
-                      const matchingQuestion = matchingTestSection?.questions.find(
-                        (question) => question.questionNumber === answer.questionNumber
-                      );
+                  {index === 0 &&
+                    testSection.type === "MultipleChoice" &&
+                    MultipleChoice && (
+                      <div>
+                        <br />
+                        <ol>
+                          <h6>
+                            TEST {toRoman(index)} {testSection.type}
+                          </h6>
+                          {MultipleChoicearray2.filter(
+                            (line) => line.trim() !== ""
+                          ).map((studentAnswer, index) => {
+                            const matchingQuestion =
+                              testSection.questions[index];
 
+                            if (
+                              studentAnswer &&
+                              matchingQuestion &&
+                              matchingQuestion.answer
+                            ) {
+                              const isCorrect = studentAnswer
+                                .trim()
+                                .includes(matchingQuestion.answer.trim());
+                              const scorePoints = isCorrect
+                                ? parseInt(matchingQuestion.score)
+                                : 0;
+                              const scoreText = isCorrect ? "check" : "wrong";
 
-                      const scoreOfStudent = matchingQuestion?.answer === answer.answer ? matchingQuestion.score : 0;
-                      const scoreText = scoreOfStudent === 0 ? "wrong" : "check";
+                              return (
+                                <li key={index}>
+                                  {studentAnswer} - {scoreText}
+                                </li>
+                              );
+                            }
+                          })}
+                        </ol>
+                      </div>
+                    )}
 
-                      return (
-                        <li key={aIndex}>
-                          {`${answer.questionNumber}. ${answer.answer} - ${scoreText}`}
-                        </li>
-                      );
+                  {index === 0 &&
+                    testSection.type === "TrueFalse" &&
+                    TrueFalse && (
+                      <div>
+                        <br />
+                        <ol>
+                          <h6>
+                            TEST {toRoman(index)} {testSection.type}
+                          </h6>
+                          {TrueFalsearray2.filter(
+                            (line) => line.trim() !== ""
+                          ).map((studentAnswer, index) => {
+                            const matchingQuestion =
+                              testSection.questions[index]; // Get the corresponding question
 
-                    })}
+                            // Check if both student's answer and correct answer are available
+                            if (
+                              studentAnswer &&
+                              matchingQuestion &&
+                              matchingQuestion.answer
+                            ) {
+                              const isCorrect = studentAnswer
+                                .trim()
+                                .includes(matchingQuestion.answer.trim());
+                              // Check if correct answer is included in student's answer
+                              const scorePoints = isCorrect
+                                ? parseInt(matchingQuestion.score)
+                                : 0;
+                              const scoreText = isCorrect ? "check" : "wrong";
 
-                  </ul>
+                              return (
+                                <li key={index}>
+                                  {studentAnswer} - {scoreText}
+                                </li>
+                              );
+                            }
+                          })}
+                        </ol>
+                      </div>
+                    )}
+                  {index === 0 &&
+                    testSection.type === "Identification" &&
+                    Identification && (
+                      <div>
+                        <br />
+                        <ol>
+                          <h6>
+                            TEST {toRoman(index)} {testSection.type}
+                          </h6>
+                          {Identificationarray2.filter(
+                            (line) => line.trim() !== ""
+                          ).map((studentAnswer, index) => {
+                            const matchingQuestion =
+                              testSection.questions[index];
+
+                            if (
+                              studentAnswer &&
+                              matchingQuestion &&
+                              matchingQuestion.answer
+                            ) {
+                              const isCorrect = studentAnswer
+                                .trim()
+                                .includes(matchingQuestion.answer.trim());
+                              const scoreText = isCorrect ? "check" : "wrong";
+
+                              return (
+                                <li key={index}>
+                                  {studentAnswer} - {scoreText}
+                                </li>
+                              );
+                            } else {
+                              return (
+                                <li key={index}>
+                                  {studentAnswer} - {scoreText}
+                                </li>
+                              );
+                            }
+                          })}
+                        </ol>
+                      </div>
+                    )}
+
+                  {index === 1 &&
+                    testSection.type === "MultipleChoice" &&
+                    MultipleChoice && (
+                      <div>
+                        <br />
+                        <ol>
+                          <h6>
+                            TEST {toRoman(index)} {testSection.type}
+                          </h6>
+                          {MultipleChoicearray2.filter(
+                            (line) => line.trim() !== ""
+                          ).map((studentAnswer, index) => {
+                            const matchingQuestion =
+                              testSection.questions[index];
+
+                            if (
+                              studentAnswer &&
+                              matchingQuestion &&
+                              matchingQuestion.answer
+                            ) {
+                              const isCorrect = studentAnswer
+                                .trim()
+                                .includes(matchingQuestion.answer.trim());
+                              const scoreText = isCorrect ? "check" : "wrong";
+
+                              return (
+                                <li key={index}>
+                                  {studentAnswer} - {scoreText}
+                                </li>
+                              );
+                            }
+                          })}
+                        </ol>
+                      </div>
+                    )}
+
+                  {index === 1 &&
+                    testSection.type === "TrueFalse" &&
+                    TrueFalse && (
+                      <div>
+                        <br />
+                        <ol>
+                          <h6>
+                            TEST {toRoman(index)} {testSection.type}
+                          </h6>
+                          {TrueFalsearray2.filter(
+                            (line) => line.trim() !== ""
+                          ).map((studentAnswer, index) => {
+                            const matchingQuestion =
+                              testSection.questions[index]; // Get the corresponding question
+
+                            // Check if both student's answer and correct answer are available
+                            if (
+                              studentAnswer &&
+                              matchingQuestion &&
+                              matchingQuestion.answer
+                            ) {
+                              const isCorrect = studentAnswer
+                                .trim()
+                                .includes(matchingQuestion.answer.trim()); // Check if correct answer is included in student's answer
+                              const scoreText = isCorrect ? "check" : "wrong"; // Assign score text based on correctness
+
+                              return (
+                                <li key={index}>
+                                  {studentAnswer} - {scoreText}
+                                </li>
+                              );
+                            }
+                          })}
+                        </ol>
+                      </div>
+                    )}
+
+                  {index === 1 &&
+                    testSection.type === "Identification" &&
+                    Identification && (
+                      <div>
+                        <br />
+                        <ol>
+                          <h6>
+                            TEST {toRoman(index)} {testSection.type}
+                          </h6>
+                          {Identificationarray2.filter(
+                            (line) => line.trim() !== ""
+                          ).map((studentAnswer, index) => {
+                            const matchingQuestion =
+                              testSection.questions[index]; // Get the corresponding question
+
+                            // Check if both student's answer and correct answer are available
+                            if (
+                              studentAnswer &&
+                              matchingQuestion &&
+                              matchingQuestion.answer
+                            ) {
+                              const isCorrect = studentAnswer
+                                .trim()
+                                .includes(matchingQuestion.answer.trim()); // Check if correct answer is included in student's answer
+                              const scoreText = isCorrect ? "check" : "wrong"; // Assign score text based on correctness
+
+                              return (
+                                <li key={index}>
+                                  {studentAnswer} - {scoreText}
+                                </li>
+                              );
+                            }
+                          })}
+                        </ol>
+                      </div>
+                    )}
                 </div>
               ))}
-
             </div>
-
           </form>
-          <ImageInput onImageSelected={handleImageSelected} />
-          <TextLocalization imageData={processedImageData} />
-          <TextLocalization2 imageData={processedImageData} />
-          <TesseractOCR
-            Image={processedImageData}
-            UIDintestpaper={uid}
-            setLoading={setLoading}
-            setProgress={setProgress}
-            updateStudentId={updateStudentId}
-            onUIDDetected={handleUIDDetected}
-          />
-          {showPopup && (
-            <div className="d-block modal" tabIndex="-1">
-              <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content border-dark">
-                  <div className="modal-header">
-                    <h5 className="modal-title">SUMMARY</h5>
-                  </div>
-                  <div className="modal-body">
-                    <p className="text-center">
-                      <p>Student Name: {students.FIRSTNAME} {students.MIDDLENAME} {students.SURNAME}</p>
-                      <p>Section Name: {sectionname}</p>
-                      <p>Test Name: {testname}</p>
-                      <p>Total Score: {totalScore2} / {totalScore}</p>
-                    </p>
-                  </div>
-                  <div className="modal-footer align-self-center">
-                    <button
-                      type="button"
-                      className="btn btn-danger"
-                      onClick={() => setShowPopup(!showPopup)}
-                    >
-                      Cancel
-                    </button>
-                    <button className="btn btn-success" onClick={sendStudentData}>
-                      Send
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </section>
       </section>
-
+      <div className="position-fixed bottom-0 end-0 p-3">
+        <button className="btn btn-dark btn-lg" onClick={sendresult}>
+          SEND
+        </button>
+      </div>
     </main>
   );
 }

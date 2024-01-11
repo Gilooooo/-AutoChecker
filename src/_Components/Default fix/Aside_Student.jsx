@@ -67,15 +67,14 @@ function Aside_Student({ clicked, setClicked }) {
       );
 
       if (logoutResponse.status === 200) {
-        console.log("Logout successful");
       } else {
-        console.log("Logout unsuccessful");
+        console.error("Logout unsuccessful");
       }
     } catch (err) {
       console.error("Error during logout:", err);
       if (err.response && err.response.status === 404) {
         // Handle specific error status code or error response
-        console.log(err.response.data.message);
+        console.error(err.response.data.message);
       } else {
         // Handle other errors
         throw err;

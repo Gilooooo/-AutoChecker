@@ -5,6 +5,16 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTUPCID } from "@/app/Provider";
 import axios from "axios";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function Records() {
   const { TUPCID } = useTUPCID();
@@ -18,6 +28,8 @@ export default function Records() {
   const [editMode, setEditMode] = useState(false);
   const [updatedRecords, setUpdatedRecords] = useState([]);
   const [warning, setWarning] = useState(false);
+  const [questions, setQuestions] = useState(0);
+  const [barChartData, setBarChartData] = useState({});
 
   const fetchResult = async () => {
     try {
@@ -26,10 +38,31 @@ export default function Records() {
       );
 
       if (response.status === 200) {
-        const { studentlist } = response.data;
+        const { studentlist, numQuestions } = response.data;
         const sortedRecords = [...studentlist];
-        sortedRecords.sort((a, b) => b.CORRECT - a.CORRECT);
+        sortedRecords.sort((a, b) => b.TOTALSCORE - a.TOTALSCORE);
         setRecordList(sortedRecords);
+        setQuestions(numQuestions);
+
+        // Prepare data for bar chart with rankings
+        const scores = sortedRecords.map((record, index) => ({
+          rank: index + 1,
+          score: record.TOTALSCORE,
+        }));
+        const barData = {
+          labels: scores.map((student) => `Rank ${student.rank}`),
+          datasets: [
+            {
+              label: "Student Scores",
+              backgroundColor: "rgba(75,192,192,1)",
+              borderColor: "rgba(0,0,0,1)",
+              borderWidth: 1,
+              data: scores.map((student) => student.score),
+            },
+          ],
+        };
+        setBarChartData(barData);
+        console.log("bardata...", barData);
       } else {
         console.error("Failed to fetch student scores");
       }
@@ -39,7 +72,9 @@ export default function Records() {
   };
 
   useEffect(() => {
-    fetchResult();
+    if (uid) {
+      fetchResult();
+    }
   }, [uid]);
 
   const generateSheet = async () => {
@@ -75,43 +110,10 @@ export default function Records() {
     }
   };
 
-  const handleEditMode = () => {
-    if (editMode) {
-      setRecordList(updatedRecords);
-      setEditMode(false);
-    } else {
-      setUpdatedRecords([...recordlist]);
-      setEditMode(true);
-    }
-  };
-
-  const handleUpdate = async (record) => {
-    try {
-      const { TUPCID, CORRECT, MAXSCORE } = record;
-
-      // Calculate the number of wrong answers based on total score and maximum score
-      const TOTALSCORE = parseInt(CORRECT);
-      const WRONG = parseInt(MAXSCORE) - TOTALSCORE;
-
-      const response = await axios.put(
-        `http://localhost:3001/updateTotalScore/${TUPCID}`,
-        {
-          CORRECT: TOTALSCORE,
-          WRONG, // Assign calculated WRONG value
-          TOTALSCORE,
-        }
-      );
-
-      if (response.status === 200) {
-        fetchResult();
-        setEditMode(false);
-      } else {
-        console.error("Failed to update CORRECT (TOTALSCORE)");
-      }
-    } catch (error) {
-      console.error("Error updating CORRECT (TOTALSCORE):", error);
-    }
-  };
+  const formattedData = recordlist.map((record, index) => ({
+    label: `${record.SURNAME}, ${record.FIRSTNAME}`,
+    score: record.TOTALSCORE,
+  }));
 
   return (
     <main className="min-vh-100 p-2 w-100">
@@ -130,7 +132,7 @@ export default function Records() {
         <ul className="d-flex flex-wrap justify-content-around mt-3 list-unstyled">
           <Link
             href={{
-              pathname: "/Faculty/Test/TestPaper",
+              pathname: "/Faculty/Test/Question_Answer",
               query: {
                 testname: testname,
                 uid: uid,
@@ -186,6 +188,7 @@ export default function Records() {
                   <th>STUDENT NAME</th>
                   <th>NUMBER OF CORRECT</th>
                   <th>NUMBER OF WRONG</th>
+                  <th>TOTAL NUMBER OF QUESTIONS</th>
                   <th>TOTAL SCORE</th>
                 </tr>
               </thead>
@@ -196,59 +199,37 @@ export default function Records() {
                     <td>
                       {record.SURNAME}, {record.FIRSTNAME}{" "}
                     </td>
-                    <td>
-                      {editMode ? (
-                        <input
-                          type="number"
-                          className="rounded border border-dark px-2 py-1 w-100"
-                          value={record.CORRECT}
-                          onChange={(e) => {
-                            const updatedRecords = [...recordlist];
-                            updatedRecords[index].CORRECT = e.target.value;
-                            setRecordList(updatedRecords);
-                          }}
-                        />
-                      ) : (
-                        record.CORRECT
-                      )}
-                    </td>
-                    <td>
-                      {parseInt(record.MAXSCORE) - parseInt(record.CORRECT)}
-                    </td>
-                    <td>
-                      {record.TOTALSCORE} / {record.MAXSCORE}
-                    </td>
-                    <td>
-                      {editMode ? (
-                        <div className="d-flex flex-column gap-2">
-                          <button
-                            onClick={() => handleUpdate(record)}
-                            className="btn btn-sm btn-outline-dark"
-                          >
-                            Update
-                          </button>
-                          <button
-                            onClick={() => handleEditMode()}
-                            className="btn btn-sm btn-outline-dark"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          className="btn btn-outline-dark"
-                          onClick={() => handleEditMode()}
-                        >
-                          Change Scores
-                        </button>
-                      )}
-                    </td>
+                    <td>{record.CORRECT}</td>
+                    <td>{questions - parseInt(record.CORRECT)}</td>
+                    <td>{questions}</td>
+                    <td>{`${record.TOTALSCORE} / ${record.MAXSCORE}`}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </section>
+
+        {barChartData.labels && barChartData.labels.length > 0 && (
+          <section className="container mt-4 py-4 col-10 px-3 border border-dark rounded h-70">
+            <h4 className="text-center">Bar Chart</h4>
+            <div className="border border-dark rounded p-3">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={formattedData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="score" fill="rgba(75,192,192,1)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        )}
         <div className="text-center mt-3">
           <button onClick={generateSheet} className="btn btn-outline-dark">
             GENERATE SHEET
@@ -283,6 +264,7 @@ export default function Records() {
             </div>
           </div>
         )}
+
         {/* Modal */}
       </section>
     </main>

@@ -52,6 +52,7 @@ function AdminReport({clicked, setClicked}){
               readOnly
             />
             <textarea
+            value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="rounded border border-dark form-control"
               placeholder="Message"

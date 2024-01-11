@@ -4,11 +4,13 @@ function Hero() {
       <section className="d-flex justify-content-center align-items-center custom-h-landing ">
         <div className="col-sm-10 col-md-11 col-lg-9 px-md-3 px-1 position-absolute text-center opacity-100 custom-shadow-2">
           <h1 className="custom-white-color custom-display fw-bold text-break">
-            AUTO-CHECKER <br />
-            OF TEST PAPER
+            ONLINE
+            TEST PAPER
+            <br/>
+            CHECKER
           </h1>
           <span className="fs-4 custom-white-color fw-light">
-            Fast and Reliable. <br /> Simple and Compact.
+             Simple and Compact.
           </span>
         </div>
         <img

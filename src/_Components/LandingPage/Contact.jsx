@@ -1,4 +1,4 @@
-import axios from "axios";
+import { axios } from "axios";
 import { useState } from "react";
 
 function Contact({ scrollToTop }) {
@@ -34,7 +34,7 @@ function Contact({ scrollToTop }) {
   return (
     <main className="d-flex position-relative justify-content-center align-items-center container-fluid p-0 min-vh-100 custom-red custom-white-color">
       <section className="d-flex flex-column justify-content-center col-sm-8 col-md-9 col-xl-6 col-11">
-        <h1 onClick={() => console.log(email)}>FOUND A BUG?</h1>
+        <h1>FOUND A BUG?</h1>
         <p className="m-0 fs-sm-3 fs-4 fw-light">
           SUBMIT A REPORT OR EMAIL US ON{" "}
           <span className="link-primary">eosteam22@gmail.com</span>

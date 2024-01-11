@@ -1,8 +1,10 @@
+"use client"
 import React, { useState, useEffect, useRef } from "react";
 import Webcam from "react-webcam";
 import axios from "axios";
 import Authenticate from "@/app/Authentication";
 import Warning from "@/_Components/Default fix/warning";
+import TextLocalization from "../../../../_Components/TestPaper/components/textLocalization";
 
 const ImageInput = ({ onImageSelected }) => {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -10,6 +12,62 @@ const ImageInput = ({ onImageSelected }) => {
   const webcamRef = useRef(null);
   const [webcamEnabled, setWebcamEnabled] = useState(false);
 
+  const [retrievedImageData, setRetrievedImageData] = useState([]);
+  const [imageData1, setImageData1] = useState(null);
+  const [imageData2, setImageData2] = useState(null);
+  const [imageData3, setImageData3] = useState(null);
+  const [imageData4, setImageData4] = useState(null);
+  const [array1, setArray1] = useState([]);
+  const [array2, setArray2] = useState([]);
+  const [array3, setArray3] = useState([]);
+  const [array4, setArray4] = useState([]);
+  const [combinedTextArray, setCombinedTextArray] = useState([]);
+
+  const handleTextExtracted1 = (textArray) => {
+    // Set the new text array as the combinedTextArray
+    setArray1(textArray);
+  };
+
+  const handleTextExtracted2 = (textArray) => {
+    // Set the new text array as the combinedTextArray
+    setArray2(textArray);
+  };
+
+  const handleTextExtracted3 = (textArray) => {
+    // Set the new text array as the combinedTextArray
+    setArray3(textArray);
+  };
+
+  const handleTextExtracted4 = (textArray) => {
+    // Set the new text array as the combinedTextArray
+    setArray4(textArray);
+  };
+
+  useEffect(() => {
+    if (retrievedImageData && retrievedImageData.length >= 4) {
+      setImageData1(retrievedImageData[0]);
+      setImageData2(retrievedImageData[1]);
+      setImageData3(retrievedImageData[2]);
+      setImageData4(retrievedImageData[3]);
+    }
+  }, [retrievedImageData]);
+
+  const combineArrays = () => {
+    // Concatenate array1 to array4 into a single array
+    const combinedArray = [
+      ...array1,
+      ...array2.map((text) => text.replace(/\s/g, '')),
+      ...array3.map((text) => text.replace(/\s/g, '')),
+      ...array4.map((text) => text.replace(/\s/g, '')),
+    ];
+    // Update the state of combinedTextArray
+    setCombinedTextArray(combinedArray);
+  };
+  useEffect(() => {
+    // Call combineArrays whenever any of the array states change
+    combineArrays();
+  }, [array1, array2, array3, array4]);
+  
   const toggleWebcam = () => {
     setWebcamEnabled(!webcamEnabled);
   };
@@ -24,7 +82,10 @@ const ImageInput = ({ onImageSelected }) => {
         ...prevImages,
         dataURItoBlob(imageSrc),
       ]);
-
+      setRetrievedImageData((prevImages) => [
+        ...prevImages,
+        dataURItoBlob(imageSrc),
+      ]);
       // Upload all images
       uploadImage(retrievedImages);
     }
@@ -79,6 +140,7 @@ const ImageInput = ({ onImageSelected }) => {
         images.push(imageUrl);
       }
       setRetrievedImages(images);
+      setRetrievedImageData(images);
     } catch (error) {
       console.error("Error getting images:", error);
     }
@@ -106,7 +168,10 @@ const ImageInput = ({ onImageSelected }) => {
         setRetrievedImages((prevImages) =>
           prevImages.filter((image, index) => index !== processingIndex)
         );
-
+        setRetrievedImageData((prevImages) =>
+          prevImages.filter((image, index) => index !== processingIndex)
+        );
+        
         processingIndex++;
 
         // Check if processing should be paused
@@ -154,10 +219,23 @@ const ImageInput = ({ onImageSelected }) => {
             Enable Webcam
           </button>
         )}
+
+        <TextLocalization imageData={imageData1} onTextExtracted={handleTextExtracted1} />
+        <TextLocalization imageData={imageData2} onTextExtracted={handleTextExtracted2} />
+        <TextLocalization imageData={imageData3} onTextExtracted={handleTextExtracted3} />
+        <TextLocalization imageData={imageData4} onTextExtracted={handleTextExtracted4} />
+        <div>
+        <h3>Combined Extracted Text:</h3>
+        <ul>
+          {combinedTextArray.map((text, index) => (
+            <li key={index}>{text}</li>
+          ))}
+        </ul>
+        </div>
       </div>
     </>
   );
-};
+}
 
 export default Authenticate(ImageInput);
 
